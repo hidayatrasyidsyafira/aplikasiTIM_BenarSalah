@@ -66,11 +66,12 @@
         }
         .tim-kartu.terpilih .tambah-anggota-area { display: block; }
         .cari-anggota-baris {
-            display: flex; gap: 8px; position: relative;
+            position: relative; margin-bottom: 10px;
         }
         .cari-anggota-baris input {
-            flex: 1; padding: 10px 12px; border: 2px solid #ddd; border-radius: 8px; outline: none;
+            width: 100%; padding: 10px 12px; border: 2px solid #ddd; border-radius: 8px; outline: none; font-size: 1rem;
         }
+        .cari-anggota-baris input:focus { border-color: #4facfe; }
         .saran-daftar {
             position: absolute; left: 0; right: 0; top: 100%;
             background: white; border: 2px solid #4facfe; border-top: none;
@@ -78,16 +79,17 @@
             z-index: 100; display: none; box-shadow: 0 6px 15px rgba(0,0,0,0.1);
         }
         .saran-item {
-            padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
+            padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;
         }
         .saran-item:hover { background: #e3f2fd; }
+        .saran-item.sudah-ada { color: #999; cursor: not-allowed; }
         .anggota-daftar { margin-top: 10px; }
         .anggota-item {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 6px 10px; background: white; border-radius: 6px; margin-bottom: 5px;
+            padding: 8px 12px; background: white; border-radius: 8px; margin-bottom: 6px;
         }
         .anggota-hapus {
-            background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 1rem;
+            background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 1rem; padding: 0 5px;
         }
         
         .btn-mulai {
@@ -158,6 +160,7 @@
             background: #95a5a6; color: white; padding: 12px 25px; border: none;
             border-radius: 10px; font-size: 1rem; cursor: pointer; margin-top: 15px;
         }
+        .info-petunjuk { font-size: 0.9rem; color: #666; margin-bottom: 15px; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -173,7 +176,9 @@
             </div>
             
             <h2>👥 Daftar Tim & Anggota</h2>
-            <p style="color:#666; font-size:0.9rem; margin-bottom:10px;">Klik nama tim untuk membuka kotak tambah anggota → ketik 4+ huruf nama → pilih dari daftar</p>
+            <div class="info-petunjuk">
+                💡 Klik tombol <strong>"+ Anggota"</strong> pada tim → ketik <strong>minimal 4 huruf</strong> nama siswa → klik nama dari daftar untuk menambahkan
+            </div>
             <div class="daftar-tim" id="wadah-tim"></div>
             
             <button class="btn-mulai" id="btn-mulai" onclick="masukBermain()" disabled>▶️ Mulai Permainan</button>
@@ -242,6 +247,7 @@ async function muatDaftarNama() {
             "BUDI SANTOSO", "BUDI SETIAWAN", "SITI AISYAH", "SITI MAHMUDAH",
             "AGUS PRATAMA", "DEWI KARTIKA", "JOKO SUSILO", "RINA ANGGRAENI"
         ];
+        console.log("⚠️ Pakai daftar nama contoh");
     }
 }
 
@@ -262,12 +268,14 @@ function perbaruiTampilanTim() {
     const wadah = document.getElementById("wadah-tim");
     wadah.innerHTML = daftarTim.map((tim, indeks) => {
         const sedangAktif = timAktifTambah === indeks;
-        const daftarAnggota = tim.anggota.map((nama, i) => `
-            <div class="anggota-item">
-                <span>👤 ${nama}</span>
-                <button class="anggota-hapus" onclick="hapusAnggota(${indeks}, ${i})">✕</button>
-            </div>
-        `).join("") || "<p style='color:#999; font-size:0.9rem;'>Belum ada anggota</p>";
+        const daftarAnggota = tim.anggota.length === 0 
+            ? "<p style='color:#999; font-size:0.9rem;'>Belum ada anggota</p>"
+            : tim.anggota.map((nama, i) => `
+                <div class="anggota-item">
+                    <span>👤 ${nama}</span>
+                    <button class="anggota-hapus" onclick="hapusAnggota(${indeks}, ${i})">✕</button>
+                </div>
+            `).join("");
         
         return `
             <div class="tim-kartu ${sedangAktif ? 'terpilih' : ''}" id="kartu-tim-${indeks}">
@@ -284,9 +292,8 @@ function perbaruiTampilanTim() {
                     </div>
                 </div>
                 <div class="tambah-anggota-area">
-                    <div class="cari-anggota-baris" id="cari-baris-${indeks}">
-                        <input type="text" id="input-cari-${indeks}" placeholder="Ketik 4+ huruf nama siswa..." 
-                               oninput="cariNama(this.value, ${indeks})">
+                    <div class="cari-anggota-baris">
+                        <input type="text" id="input-cari-${indeks}" placeholder="Ketik 4+ huruf nama siswa...">
                         <div class="saran-daftar" id="saran-${indeks}"></div>
                     </div>
                     <div class="anggota-daftar">${daftarAnggota}</div>
@@ -296,9 +303,17 @@ function perbaruiTampilanTim() {
     }).join("");
     
     document.getElementById("btn-mulai").disabled = daftarTim.length < 1;
+    
+    // Pasang event listener untuk input pencarian
+    daftarTim.forEach((_, indeks) => {
+        const input = document.getElementById(`input-cari-${indeks}`);
+        if (input) {
+            input.addEventListener("input", (e) => cariNama(e.target.value, indeks));
+        }
+    });
 }
 
-// === BUKA/KOTAK TAMBAH ANGGOTA ===
+// === BUKA/TUTUP TAMBAH ANGGOTA ===
 function bukaTambahAnggota(indeks) {
     timAktifTambah = timAktifTambah === indeks ? null : indeks;
     perbaruiTampilanTim();
@@ -309,19 +324,21 @@ function cariNama(kata, indeksTim) {
     const list = document.getElementById(`saran-${indeksTim}`);
     kata = kata.trim().toUpperCase();
     
-    if (kata.length < 4) { list.style.display = "none"; return; }
+    if (kata.length < 4) { 
+        list.style.display = "none"; 
+        return; 
+    }
     
     const cocok = daftarNamaSiswa.filter(n => n.toUpperCase().includes(kata)).slice(0, 6);
     
     if (cocok.length === 0) {
-        list.innerHTML = `<div class="saran-item">Tidak ditemukan</div>`;
+        list.innerHTML = `<div class="saran-item">Tidak ditemukan — coba ketik nama lain</div>`;
     } else {
         list.innerHTML = cocok.map(nama => {
             const sudahAda = daftarTim.some(t => t.anggota.includes(nama));
-            const teks = sudahAda ? `${nama} ✓ Sudah ada` : nama;
-            return `<div class="saran-item ${sudahAda?'style=color:#999':''}" 
-                        onclick="${sudahAda?'':'tambahKeTim("'+nama.replace(/"/g,'&quot;')+'",'+indeksTim+')'}">
-                        👤 ${teks}
+            return `<div class="saran-item ${sudahAda ? 'sudah-ada' : ''}" 
+                        onclick="${sudahAda ? '' : 'tambahKeTim("' + nama.replace(/"/g, '&quot;') + '",' + indeksTim + ')'}">
+                        👤 ${nama} ${sudahAda ? '✓ Sudah ada di tim' : ''}
                     </div>`;
         }).join("");
     }
@@ -332,8 +349,13 @@ function cariNama(kata, indeksTim) {
 function tambahKeTim(nama, indeksTim) {
     if (daftarTim[indeksTim].anggota.includes(nama)) return;
     daftarTim[indeksTim].anggota.push(nama);
-    document.getElementById(`input-cari-${indeksTim}`).value = "";
-    document.getElementById(`saran-${indeksTim}`).style.display = "none";
+    
+    // Bersihkan input dan saran
+    const input = document.getElementById(`input-cari-${indeksTim}`);
+    if (input) input.value = "";
+    const list = document.getElementById(`saran-${indeksTim}`);
+    if (list) list.style.display = "none";
+    
     perbaruiTampilanTim();
 }
 
@@ -428,7 +450,6 @@ function kirimJawaban(pilihan) {
     const benar = pilihan === soal.jawaban;
     if (benar) timTerpilih.skor++;
     
-    // Simpan ke Sheet — nanti sambungkan Apps Script
     document.getElementById("status-simpan").textContent = 
         `${timTerpilih.namaTim}: ${benar ? "+1 poin ✅" : "0 poin ❌"}`;
     

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Poin Per Anggota</title>
+    <title>Kuis Benar/Salah — Simpan ke Google Sheet</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -162,21 +162,17 @@
         .p1 { background: #fff3cd; border-left: 5px solid #f1c40f; }
         .p2 { background: #e9e9e9; border-left: 5px solid #95a5a6; }
         .p3 { background: #f5e6d3; border-left: 5px solid #cd7f32; }
-        .daftar-poin-anggota { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
-        .kotak-poin-siswa {
-            background: white; padding: 6px 12px; border-radius: 8px; font-size: 0.9rem;
-        }
-        .nama-siswa { font-weight: 500; }
-        .nilai-poin { font-weight: bold; color: #2ecc71; margin-left: 4px; }
+        .status-simpan { text-align: center; margin: 15px 0; font-weight: bold; padding: 10px; border-radius: 10px; }
+        .status-simpan.berhasil { background: #d4edda; color: #155724; }
+        .status-simpan.gagal { background: #f8d7da; color: #721c24; }
         .petunjuk { font-size: 0.9rem; color: #666; margin-bottom: 15px; line-height: 1.5; }
         .cek-semua { color: #e67e22; font-weight: bold; margin-bottom: 10px; text-align: center; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🧠 Kuis Benar/Salah — Poin Per Anggota</h1>
+        <h1>🧠 Kuis Benar/Salah — Simpan ke Google Sheet</h1>
         
-        <!-- === LAYAR 1: SETUP TIM === -->
         <div id="layar-setup" class="layar aktif">
             <h2>➕ Buat Tim Baru</h2>
             <div class="buat-tim-baris">
@@ -193,7 +189,6 @@
             <button class="btn-mulai" id="btn-mulai" onclick="mulaiBermain()" disabled>▶️ Mulai Permainan</button>
         </div>
         
-        <!-- === LAYAR 2: BERMAIN === -->
         <div id="layar-main" class="layar">
             <div class="progress" id="info-soal">Soal 1 dari 0</div>
             <div class="soal-box" id="teks-soal"></div>
@@ -209,9 +204,9 @@
             <button class="btn-lanjut" id="btn-lanjut" onclick="soalSelanjutnya()">Soal Berikutnya →</button>
         </div>
         
-        <!-- === LAYAR 3: HASIL AKHIR === -->
         <div id="layar-akhir" class="layar">
             <h2 style="text-align: center; font-size: 1.8rem;">🎉 Hasil Akhir — Poin Per Siswa</h2>
+            <div id="status-simpan" class="status-simpan">📤 Menyimpan hasil ke Google Sheet...</div>
             <div class="peringkat" id="wadah-hasil"></div>
             <button class="btn-mulai" onclick="location.reload()">🔄 Mulai Baru</button>
         </div>
@@ -222,10 +217,12 @@
 const SHEET_ID = "1FZ8Uj3l5IuCFchi-NnuCtjyrbTSN8sU8Nb6_EGLoIY0";
 const URL_DATASISWA = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=datasiswa`;
 
+// ⚠️ PENTING: Buat Apps Script Deployment di Google Sheet, ganti URL di bawah ini:
+const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4Ee3PNxRqIt4wCtKL9wZvEVSzl7jcoJEfhG4_rhmYlhfVeFFT-2pE_UxeN9rK6djcCA/exec"; // Isi dengan URL Deployment Apps Script kamu
+
 // === DATA ===
 let daftarNama = [];
 let daftarTim = [];
-// Struktur: {nama, anggota: [{nama, poin:0}], jawaban: null}
 let timTerbuka = null;
 let daftarSoal = [];
 let nomorSoal = 0;
@@ -261,11 +258,7 @@ function buatTim() {
     if (!nama) return alert("Ketik nama tim dulu!");
     if (daftarTim.some(t => t.nama === nama)) return alert("Sudah ada tim ini!");
     
-    daftarTim.push({ 
-        nama, 
-        anggota: [], // [{nama, poin}]
-        jawaban: null // true=benar, false=salah, null=belum pilih
-    });
+    daftarTim.push({ nama, anggota: [], jawaban: null });
     input.value = "";
     tampilDaftarTim();
 }
@@ -416,7 +409,6 @@ function mulaiBermain() {
 
 function tampilSoalSaatIni() {
     sudahDiperiksa = false;
-    // Reset pilihan jawaban semua tim
     daftarTim.forEach(t => t.jawaban = null);
     
     document.getElementById("info-soal").textContent = `Soal ${nomorSoal+1} dari ${daftarSoal.length}`;
@@ -428,20 +420,18 @@ function tampilSoalSaatIni() {
     perbaruiStatusPilihan();
 }
 
-// === TIM MEMILIH JAWABAN ===
 function pilihJawaban(idxTim, pilihan) {
     if (sudahDiperiksa) return;
     daftarTim[idxTim].jawaban = pilihan;
     perbaruiStatusPilihan();
 }
 
-// === TAMPIL PILIHAN SEMUA TIM ===
 function perbaruiStatusPilihan() {
     const semuaSudahPilih = daftarTim.every(t => t.jawaban !== null);
     
     document.getElementById("info-status-pilih").textContent = 
         semuaSudahPilih ? "✅ Semua tim sudah memilih — Siap periksa!" 
-                        : `⏳ Menunggu tim memilih... (${daftarTim.filter(t => t.jawaban).length}/${daftarTim.length})`;
+                        : `⏳ Menunggu tim memilih... (${daftarTim.filter(t => t.jawaban !== null).length}/${daftarTim.length})`;
     
     document.getElementById("btn-periksa").disabled = !semuaSudahPilih;
     
@@ -467,39 +457,26 @@ function perbaruiStatusPilihan() {
                         </button>
                     </div>
                 </div>
-                ${sudahDiperiksa ? `
-                    <div class="poin-anggota" style="margin-top: 10px;">
-                        ${tim.anggota.map(a => `
-                            <span class="poin-siswa ${pilih === daftarSoal[nomorSoal].jawaban ? 'benar' : ''}">
-                                ${a.nama.split(' ')[0]}: ⭐ ${a.poin}
-                            </span>
-                        `).join("")}
-                    </div>
-                ` : `
-                    <div class="poin-anggota" style="margin-top: 8px;">
-                        ${tim.anggota.map(a => `<span class="poin-siswa">${a.nama.split(' ')[0]}: ⭐ ${a.poin}</span>`).join("")}
-                    </div>
-                `}
+                <div class="poin-anggota" style="margin-top: 8px;">
+                    ${tim.anggota.map(a => `<span class="poin-siswa">${a.nama.split(' ')[0]}: ⭐ ${a.poin}</span>`).join("")}
+                </div>
             </div>
         `;
     }).join("");
 }
 
-// === CEK SEMUA JAWABAN & BERI POIN ===
 function periksaSemuaJawaban() {
     sudahDiperiksa = true;
     const soal = daftarSoal[nomorSoal];
     
-    // Beri poin ke setiap anggota tim yang menjawab benar
     daftarTim.forEach(tim => {
         if (tim.jawaban === soal.jawaban) {
-            tim.anggota.forEach(a => a.poin++); // Setiap anggota dapat +1 poin
+            tim.anggota.forEach(a => a.poin++);
         }
     });
     
     perbaruiStatusPilihan();
     
-    // Tampilkan penjelasan
     const kotak = document.getElementById("kotak-umpan");
     const timBenar = daftarTim.filter(t => t.jawaban === soal.jawaban).map(t => t.nama).join(", ");
     const timSalah = daftarTim.filter(t => t.jawaban !== soal.jawaban).map(t => t.nama).join(", ");
@@ -527,27 +504,49 @@ function soalSelanjutnya() {
     tampilSoalSaatIni();
 }
 
+// === SIMPAN KE GOOGLE SHEET ===
+async function simpanKeGoogleSheet(semuaSiswa) {
+    if (!APPSCRIPT_URL) {
+        document.getElementById("status-simpan").className = "status-simpan gagal";
+        document.getElementById("status-simpan").textContent = "⚠️ URL Apps Script belum diisi — data tidak tersimpan";
+        return false;
+    }
+    
+    try {
+        const res = await fetch(APPSCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ siswa: semuaSiswa, waktu: new Date().toLocaleString("id-ID") })
+        });
+        
+        document.getElementById("status-simpan").className = "status-simpan berhasil";
+        document.getElementById("status-simpan").textContent = "✅ Hasil berhasil disimpan ke Google Sheet!";
+        return true;
+    } catch (err) {
+        document.getElementById("status-simpan").className = "status-simpan gagal";
+        document.getElementById("status-simpan").textContent = "❌ Gagal menyimpan: " + err.message;
+        return false;
+    }
+}
+
 // === HASIL AKHIR ===
-function tampilHasil() {
+async function tampilHasil() {
     document.getElementById("layar-main").classList.remove("aktif");
     document.getElementById("layar-akhir").classList.add("aktif");
     
-    // Kumpulkan semua siswa dari semua tim
     const semuaSiswa = [];
     daftarTim.forEach(tim => {
         tim.anggota.forEach(a => {
-            semuaSiswa.push({
-                nama: a.nama,
-                poin: a.poin,
-                tim: tim.nama
-            });
+            semuaSiswa.push({ nama: a.nama, poin: a.poin, tim: tim.nama });
         });
     });
     
-    // Urutkan berdasarkan poin
     semuaSiswa.sort((a, b) => b.poin - a.poin);
     
-    // Tampil peringkat per siswa
+    // Simpan ke Google Sheet
+    await simpanKeGoogleSheet(semuaSiswa);
+    
     document.getElementById("wadah-hasil").innerHTML = semuaSiswa.length === 0
         ? "<p style='text-align:center; color:#666;'>Belum ada data siswa</p>"
         : semuaSiswa.map((s, i) => {

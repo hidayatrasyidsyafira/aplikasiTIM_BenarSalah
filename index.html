@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Sinkron Google Sheet</title>
+    <title>Kuis Benar/Salah — Sinkron Penuh</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -90,6 +90,9 @@
         .p3 { background: #f5e6d3; border-left: 4px solid #cd7f32; }
         .medali { font-size: 1.2rem; margin-right: 8px; }
         .muat { text-align: center; color: #666; padding: 20px; }
+        .pesan { padding: 12px; border-radius: 10px; margin: 10px 0; display: none; }
+        .pesan.sukses { background: #d4edda; color: #155724; }
+        .pesan.gagal { background: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
@@ -127,14 +130,15 @@
             <h2>🔑 Masuk ke Ruang</h2>
             <p style="color:#2980b9; font-weight:bold;">Kode Ruang: <span id="kode-dari-link"></span></p>
             <input type="text" id="nama-saya" placeholder="Nama Lengkap Anda">
-            <button class="btn btn-hijau" onclick="masukKeTim()">Lanjut →</button>
-            <p id="pesan-salah" style="color:red; margin-top:10px; display:none;">Nama sudah dipakai atau data belum siap, coba lagi</p>
+            <button class="btn btn-hijau" id="btn-lanjut-nama" onclick="ambilDaftarTim()">Lanjut →</button>
+            <p id="pesan-salah" class="pesan gagal">Kode tidak ditemukan atau belum siap, tanyakan ke guru</p>
         </div>
 
         <div id="layar-pilih-tim" class="layar">
             <h2>👥 Pilih Tim Anda</h2>
             <p style="color:#666; font-size:0.9rem;">Klik nama tim untuk bergabung</p>
             <div id="daftar-tim-pilihan"></div>
+            <p id="pesan-gabung" class="pesan"></p>
         </div>
 
         <div id="layar-tunggu" class="layar">
@@ -172,7 +176,6 @@
 
 <script>
 // === KONFIGURASI — Tempel URL Apps Script kamu di sini ===
-                          
 const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHumfJu2Agl0Sk65WZNXFtgcXPmYXgAw4OcqyA8IM7NjNUkNc2DZfC2IbaJIHVmwgS5g/exec";
 const WAKTU_SOAL = 20;
 
@@ -224,8 +227,8 @@ async function buatRuang() {
 
 async function tambahTim() {
     const nama = document.getElementById("nama-tim-baru").value.trim();
-    if (!nama) return alert("Isi nama tim!");
-    if (daftarTim.some(t => t.nama === nama)) return alert("Sudah ada!");
+    if (!nama) return alert("Isi nama tim dulu!");
+    if (daftarTim.some(t => t.nama === nama)) return alert("Tim sudah ada!");
     
     daftarTim.push({nama, anggota:[], jawaban:null});
     document.getElementById("nama-tim-baru").value = "";
@@ -241,7 +244,7 @@ function tampilDaftarTimGuru() {
             <div class="nama-tim">${t.nama}</div>
             <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
             <div class="daftar-anggota">
-                ${t.anggota.length === 0 ? '<span style="color:#999;">Belum ada</span>' :
+                ${t.anggota.length === 0 ? '<span style="color:#999;">Belum ada siswa</span>' :
                   t.anggota.map(a => `<span class="baju-nama">${a.nama}</span>`).join("")}
             </div>
         </div>
@@ -253,36 +256,59 @@ function tampilDaftarTimGuru() {
 }
 
 function salinSemua() {
-    const teks = `Kode: ${kodeRuang}\nLink: ${document.getElementById("link-siswa").textContent}`;
-    navigator.clipboard.writeText(teks).then(() => alert("Disalin!"));
+    const teks = `Kode Ruang: ${kodeRuang}\nLink: ${document.getElementById("link-siswa").textContent}`;
+    navigator.clipboard.writeText(teks).then(() => alert("Kode & Link disalin! Kirim ke siswa ya"));
 }
 
 // Pantau update dari siswa setiap 2 detik
 function mulaiPantauUpdate() {
     sinkron = setInterval(async () => {
-        const res = await kirimKeSheet({aksi:"ambilData", kode:kodeRuang});
-        if (res && res.tim) {
-            daftarTim = res.tim;
-            tampilDaftarTimGuru();
-        }
+        await ambilDataTerbaru();
     }, 2000);
 }
 
+async function ambilDataTerbaru() {
+    try {
+        // Baca langsung dari Google Sheet lewat CSV
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
+        if (!res.ok) return;
+        const teks = await res.text();
+        const mulai = teks.indexOf('{');
+        if (mulai === -1) return;
+        const data = eval('(' + teks.slice(mulai) + ')');
+        const baris = data.table.rows.find(r => String(r.c?.[0]?.v) === String(kodeRuang));
+        if (!baris || !baris.c?.[1]?.v) return;
+        daftarTim = JSON.parse(baris.c[1].v);
+        tampilDaftarTimGuru();
+    } catch (e) {
+        // Lewati jika gagal baca
+    }
+}
+
 // === SISWA ===
-async function masukKeTim() {
+async function ambilDaftarTim() {
     namaSiswa = document.getElementById("nama-saya").value.trim();
     if (!namaSiswa) return alert("Isi nama dulu!");
     
-    // Ambil daftar tim dari sheet
-    const res = await kirimKeSheet({aksi:"ambilData", kode:kodeRuang});
-    if (!res || !res.tim) {
+    // Baca langsung dari Google Sheet
+    try {
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
+        if (!res.ok) throw 0;
+        const teks = await res.text();
+        const mulai = teks.indexOf('{');
+        if (mulai === -1) throw 0;
+        const data = eval('(' + teks.slice(mulai) + ')');
+        const baris = data.table.rows.find(r => String(r.c?.[0]?.v) === String(kodeRuang));
+        if (!baris || !baris.c?.[1]?.v) throw 0;
+        
+        daftarTim = JSON.parse(baris.c[1].v);
+        tampilLayar("pilih-tim");
+        tampilPilihanTim();
+        
+    } catch {
         document.getElementById("pesan-salah").style.display = "block";
-        return;
+        setTimeout(() => document.getElementById("pesan-salah").style.display = "none", 3000);
     }
-    
-    daftarTim = res.tim;
-    tampilLayar("pilih-tim");
-    tampilPilihanTim();
 }
 
 function tampilPilihanTim() {
@@ -302,30 +328,43 @@ function tampilPilihanTim() {
 }
 
 async function pilihGabung(idx) {
+    const pesan = document.getElementById("pesan-gabung");
+    
     // Cek sudah masuk?
     if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
         timSaya = idx;
-        tampilLayar("tunggu");
+        tampilLayarTunggu();
         return;
     }
     
-    // Kirim ke sheet
-    const res = await kirimKeSheet({
+    // Cek nama ganda di tim lain
+    const sudahAda = daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa));
+    if (sudahAda) {
+        pesan.textContent = "⚠️ Nama sudah dipakai di tim lain!";
+        pesan.className = "pesan gagal";
+        pesan.style.display = "block";
+        return;
+    }
+    
+    // Tambahkan lokal dulu
+    daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
+    
+    // Kirim ke Sheet
+    await kirimKeSheet({
         aksi: "gabungTim",
         kode: kodeRuang,
         idxTim: idx,
         nama: namaSiswa
     });
     
-    if (res && res.status === "ok") {
-        daftarTim = res.tim;
-        timSaya = idx;
-        tampilLayar("tunggu");
-        document.getElementById("info-saya").innerHTML = 
-            `✅ <strong>${namaSiswa}</strong><br>Bergabung di <strong>${daftarTim[idx].nama}</strong>`;
-    } else {
-        alert("Nama sudah dipakai! Gunakan nama lain.");
-    }
+    timSaya = idx;
+    tampilLayarTunggu();
+}
+
+function tampilLayarTunggu() {
+    tampilLayar("tunggu");
+    document.getElementById("info-saya").innerHTML = 
+        `✅ <strong>${namaSiswa}</strong><br>Bergabung di <strong>${daftarTim[timSaya].nama}</strong><br>Menunggu guru...`;
 }
 
 // === MULAI BERMAIN ===
@@ -428,13 +467,13 @@ function tampilLayar(nama) {
 
 async function kirimKeSheet(data) {
     try {
-        const res = await fetch(APPSCRIPT_URL, {
+        await fetch(APPSCRIPT_URL, {
             method: "POST",
             mode: "no-cors",
             headers: {"Content-Type":"application/json"},
             body: JSON.stringify(data)
         });
-        return {status:"ok"}; // no-cors tidak baca respon, asumsikan berhasil
+        return {status:"ok"};
     } catch(e) { return null; }
 }
 

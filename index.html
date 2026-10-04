@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Sinkron Penuh</title>
+    <title>Kuis Benar/Salah — Poin Terhitung</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -69,6 +69,7 @@
         }
         .info-atas { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; color: #666; }
         .timer { font-weight: bold; color: #e67e22; font-size: 1.1rem; }
+        .poin-saya { font-weight: bold; color: #2ecc71; }
 
         .tombol-jwb-besar { display: flex; gap: 15px; margin-top: 30px; }
         .btn-jwb {
@@ -144,6 +145,7 @@
             <h2>⏳ Menunggu Mulai</h2>
             <div style="background:#fff3cd; padding:15px; border-radius:10px;">
                 <p id="info-saya"></p>
+                <p class="poin-saya" style="margin-top:8px;">⭐ Poin: <span id="poin-saya">0</span></p>
             </div>
             <p style="text-align:center; color:#888; margin-top:30px;">Tunggu guru menekan tombol MULAI...</p>
         </div>
@@ -153,6 +155,7 @@
             <div class="info-atas">
                 <span id="info-soal-ke"></span>
                 <span class="timer" id="tampil-timer"></span>
+                <span class="poin-saya" id="tampil-poin-saya" style="display:none;">⭐ 0</span>
             </div>
             <div class="soal-box hanya-guru" id="teks-soal-guru"></div>
             <p id="petunjuk-siswa" style="text-align:center; color:#666;">Lihat soal di layar/papan tulis</p>
@@ -194,6 +197,7 @@ let sudahJawab = false;
 let sinkron = null;
 let sudahGabung = false;
 let sudahMulai = false;
+let poinSaya = 0;
 
 // === INISIALISASI ===
 document.addEventListener("DOMContentLoaded", async () => {
@@ -213,7 +217,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         tampilLayar("guru");
     }
     
-    // Sesuaikan tampilan peran
     if (peran === 'siswa') {
         document.querySelectorAll('.hanya-guru').forEach(el => el.style.display = 'none');
     } else {
@@ -257,7 +260,7 @@ function tampilDaftarTimGuru() {
             <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
             <div class="daftar-anggota">
                 ${t.anggota.length === 0 ? '<span style="color:#999;">Belum ada siswa</span>' :
-                  t.anggota.map(a => `<span class="baju-nama">${a.nama}</span>`).join("")}
+                  t.anggota.map(a => `<span class="baju-nama">${a.nama} (${a.poin||0})</span>`).join("")}
             </div>
         </div>
     `).join("");
@@ -272,7 +275,6 @@ function salinSemua() {
     navigator.clipboard.writeText(teks).then(() => alert("Kode & Link disalin! Kirim ke siswa ya"));
 }
 
-// Pantau update setiap 2 detik
 function mulaiPantauUpdate() {
     sinkron = setInterval(async () => {
         await ambilDataTerbaru();
@@ -302,13 +304,22 @@ async function ambilDataTerbaru() {
         const timBaru = JSON.parse(baris.c[1].v);
         const status = baris.c[3]?.v || "SIAP";
         
-        // Perbarui jika berubah
+        // Perbarui daftar tim
         if (JSON.stringify(timBaru) !== JSON.stringify(daftarTim)) {
             daftarTim = timBaru;
             if (peran === 'guru') {
                 tampilDaftarTimGuru();
             } else if (peran === 'siswa' && sudahGabung) {
                 tampilPilihanTim();
+                // Perbarui poin siswa
+                const saya = daftarTim.flatMap(t => t.anggota).find(a => a.nama === namaSiswa);
+                if (saya) {
+                    poinSaya = saya.poin || 0;
+                    document.getElementById("poin-saya").textContent = poinSaya;
+                    if (sudahMulai) {
+                        document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
+                    }
+                }
             }
         }
         
@@ -357,7 +368,7 @@ function tampilPilihanTim() {
                 <div class="nama-tim">${sudah ? '✅ ' : ''}${t.nama}</div>
                 <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
                 <div class="daftar-anggota">
-                    ${t.anggota.map(a => `<span class="baju-nama ${a.nama===namaSiswa?'saya':''}">${a.nama}</span>`).join("")}
+                    ${t.anggota.map(a => `<span class="baju-nama ${a.nama===namaSiswa?'saya':''}">${a.nama} (${a.poin||0})</span>`).join("")}
                 </div>
             </div>
         `;
@@ -365,15 +376,15 @@ function tampilPilihanTim() {
 }
 
 async function pilihGabung(idx) {
-    // Cek sudah masuk?
     if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
         timSaya = idx;
         sudahGabung = true;
+        const saya = daftarTim[idx].anggota.find(a => a.nama === namaSiswa);
+        poinSaya = saya?.poin || 0;
         tampilLayarTunggu();
         return;
     }
     
-    // Cek nama ganda
     const sudahAda = daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa));
     if (sudahAda) {
         alert("⚠️ Nama sudah dipakai di tim lain!");
@@ -381,6 +392,7 @@ async function pilihGabung(idx) {
     }
     
     daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
+    poinSaya = 0;
     
     await kirimKeSheet({
         aksi: "gabungTim",
@@ -397,12 +409,17 @@ async function pilihGabung(idx) {
 function tampilLayarTunggu() {
     tampilLayar("tunggu");
     document.getElementById("info-saya").innerHTML = 
-        `✅ <strong>${namaSiswa}</strong><br>Bergabung di <strong>${daftarTim[timSaya].nama}</strong><br>Menunggu guru...`;
+        `✅ <strong>${namaSiswa}</strong><br>Bergabung di <strong>${daftarTim[timSaya].nama}</strong>`;
+    document.getElementById("poin-saya").textContent = poinSaya;
 }
 
 function masukLayarBermain() {
     soalKe = 0;
     tampilLayar("bermain");
+    if (peran === 'siswa') {
+        document.getElementById("tampil-poin-saya").style.display = "inline";
+        document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
+    }
     tampilSoal();
 }
 
@@ -413,7 +430,6 @@ async function mulaiKuis() {
     sudahMulai = true;
     if (sinkron) clearInterval(sinkron);
     
-    // Tandai mulai di sheet
     await kirimKeSheet({
         aksi: "mulaiKuis",
         kode: kodeRuang,
@@ -458,30 +474,54 @@ function pilihJawab(pilihan) {
     document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === true);
     document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === false);
     
-    if (timSaya !== null) daftarTim[timSaya].jawaban = pilihan;
+    if (timSaya !== null) {
+        daftarTim[timSaya].jawaban = pilihan;
+    }
 }
 
 async function waktuHabis() {
     const soal = daftarSoal[soalKe];
+    const jawabanBenar = String(soal.jawaban).toLowerCase() === "true";
     
-    daftarTim.forEach(tim => {
-        if (tim.jawaban === soal.jawaban) {
-            tim.anggota.forEach(a => a.poin++);
+    // Hitung poin: tim yang jawabannya cocok = semua anggota dapat +1
+    daftarTim.forEach((tim, idx) => {
+        const jawabanTim = String(tim.jawaban).toLowerCase() === "true";
+        if (jawabanTim === jawabanBenar) {
+            tim.anggota.forEach(a => {
+                a.poin = (a.poin || 0) + 1;
+                // Perbarui poin saya jika ini saya
+                if (a.nama === namaSiswa) {
+                    poinSaya = a.poin;
+                }
+            });
         }
     });
     
-    // Simpan poin terbaru
+    // Simpan ke Sheet
     await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
     
-    const benar = timSaya !== null && daftarTim[timSaya]?.jawaban === soal.jawaban;
+    // Tampilkan hasil
+    const benarSaya = timSaya !== null && daftarTim[timSaya]?.jawaban !== undefined &&
+        String(daftarTim[timSaya].jawaban).toLowerCase() === String(jawabanBenar).toLowerCase();
+    
     const kotak = document.getElementById("hasil-soal");
     kotak.style.display = "block";
     kotak.innerHTML = `
-        <div style="padding:15px; border-radius:10px; background:${benar?'#d4edda':'#f8d7da'}; color:${benar?'#155724':'#721c24'};">
-            ${benar?'✅ BENAR!':'❌ SALAH!'}<br>${soal.penjelasan}
-            ${timSaya!==null?`<br>Poin Anda: ⭐ ${daftarTim[timSaya].anggota.find(a=>a.nama===namaSiswa)?.poin||0}`:''}
+        <div style="padding:15px; border-radius:10px; background:${benarSaya?'#d4edda':'#f8d7da'}; color:${benarSaya?'#155724':'#721c24'};">
+            ${benarSaya?'✅ BENAR! +1 Poin':'❌ SALAH!'}<br>
+            Jawaban benar: <strong>${jawabanBenar ? 'BENAR' : 'SALAH'}</strong><br>
+            ${soal.penjelasan}
+            ${timSaya!==null?`<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>`:''}
         </div>
     `;
+    
+    // Perbarui tampilan poin
+    if (peran === 'siswa' && sudahMulai) {
+        document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
+    }
+    if (peran === 'guru') {
+        tampilDaftarTimGuru();
+    }
     
     setTimeout(async () => {
         soalKe++;
@@ -498,7 +538,7 @@ async function selesai() {
     tampilLayar("akhir");
     
     const semuaSiswa = [];
-    daftarTim.forEach(t => t.anggota.forEach(a => semuaSiswa.push({nama:a.nama, poin:a.poin, tim:t.nama})));
+    daftarTim.forEach(t => t.anggota.forEach(a => semuaSiswa.push({nama:a.nama, poin:a.poin || 0, tim:t.nama})));
     semuaSiswa.sort((a,b) => b.poin - a.poin);
     
     document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s,i) => {
@@ -552,7 +592,7 @@ async function muatSoal() {
             if(b.length<2||!b[0])continue;
             daftarSoal.push({
                 teks:b[0],
-                jawaban:b[1].toUpperCase()==="BENAR",
+                jawaban:String(b[1]).toUpperCase()==="BENAR",
                 penjelasan:b[2]||(b[1]==="BENAR"?"✅ Benar!":"❌ Salah!")
             });
         }

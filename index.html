@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Mode Tim</title>
+    <title>Kuis Benar/Salah — Sinkron Google Sheet</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -35,11 +35,8 @@
             margin-top: 6px;
         }
         .btn-biru { background: #3498db; color: white; }
-        .btn-biru:hover { background: #2980b9; }
         .btn-hijau { background: #2ecc71; color: white; }
-        .btn-hijau:hover { background: #27ae60; }
-        .btn-oranye { background: #f39c12; color: white; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .kode-ruang-kotak {
             background: #eaf4fe; padding: 20px; border-radius: 14px; text-align: center;
@@ -61,7 +58,6 @@
         .kartu-tim:hover { border-color: #2ecc71; background: #f0fff4; }
         .kartu-tim.terpilih { border-color: #2ecc71; background: #d4edda; }
         .nama-tim { font-weight: bold; font-size: 1.1rem; }
-        .jumlah-anggota { font-size: 0.9rem; color: #666; margin-top: 6px; }
         .daftar-anggota { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
         .baju-nama { background: #eaf4fe; padding: 5px 12px; border-radius: 15px; font-size: 0.9rem; }
         .baju-nama.saya { background: #2ecc71; color: white; font-weight: bold; }
@@ -77,9 +73,9 @@
         .tombol-jwb-besar { display: flex; gap: 15px; margin-top: 30px; }
         .btn-jwb {
             flex: 1; padding: 40px 20px; font-size: 1.5rem; font-weight: bold;
-            border: none; border-radius: 16px; cursor: pointer; transition: all 0.2s;
+            border: none; border-radius: 16px; cursor: pointer;
         }
-        .btn-jwb:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .btn-jwb:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-benar { background: #2ecc71; color: white; }
         .btn-salah { background: #e74c3c; color: white; }
         .btn-jwb.dipilih { box-shadow: inset 0 0 0 4px gold; }
@@ -93,321 +89,253 @@
         .p2 { background: #e9e9e9; border-left: 4px solid #95a5a6; }
         .p3 { background: #f5e6d3; border-left: 4px solid #cd7f32; }
         .medali { font-size: 1.2rem; margin-right: 8px; }
-        .status-simpan { text-align: center; margin-top: 15px; padding: 10px; border-radius: 10px; font-weight: bold; }
-        .berhasil { background: #d4edda; color: #155724; }
-        .gagal { background: #f8d7da; color: #721c24; }
-        .muat { text-align: center; color: #666; padding: 15px; }
+        .muat { text-align: center; color: #666; padding: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🧠 Kuis Benar / Salah</h1>
+        <h1>🧠 Kuis Benar/Salah</h1>
 
-        <!-- === DETEKSI OTOMATIS: GURU ATAU SISWA === -->
-        <div id="layar-peran-cek" class="layar aktif">
-            <p class="muat">Memuat...</p>
-        </div>
+        <div id="layar-cek" class="layar aktif"><p class="muat">Memuat...</p></div>
 
-        <!-- === LAYAR GURU: BUAT RUANG === -->
+        <!-- === GURU === -->
         <div id="layar-guru" class="layar">
-            <h2>📡 Buat Ruang Permainan</h2>
-            
+            <h2>📡 Buat Ruang & Tim</h2>
             <div style="display:flex; gap:8px; margin:15px 0;">
-                <input type="text" id="input-nama-tim" placeholder="Nama Tim (contoh: TIM A)">
-                <button class="btn btn-biru" style="width:auto; white-space:nowrap; flex-shrink:0;" onclick="tambahTim()">+ Tim</button>
+                <input type="text" id="nama-tim-baru" placeholder="Nama Tim (contoh: TIM A)">
+                <button class="btn btn-biru" style="width:auto; white-space:nowrap;" onclick="tambahTim()">+ Tim</button>
             </div>
             
-            <div id="daftar-tim-guru" style="margin:15px 0;"></div>
+            <div id="daftar-tim-guru"></div>
 
             <div class="kode-ruang-kotak" id="kotak-kode" style="display:none;">
                 <p class="sub-kode">Kode Ruang:</p>
                 <div class="kode-ruang" id="tampil-kode"></div>
-                
-                <div class="link-siswa-kotak" id="kotak-link-siswa">
-                    <p style="font-weight:bold; margin-bottom:5px;">🔗 Link untuk Siswa:</p>
-                    <span id="link-siswa-teks"></span>
+                <div class="link-siswa-kotak">
+                    <p style="font-weight:bold; margin-bottom:5px;">🔗 Link Siswa:</p>
+                    <span id="link-siswa"></span>
                 </div>
-                
-                <button class="btn btn-biru" style="width:auto; padding:10px 20px; font-size:0.9rem; margin-top:8px;" onclick="salinSemua()">📋 Salin Kode & Link</button>
+                <button class="btn btn-biru" style="margin-top:10px;" onclick="salinSemua()">📋 Salin Kode & Link</button>
             </div>
 
-            <div id="status-siswa-masuk" style="margin:20px 0;"></div>
-
+            <div id="status-masuk" style="margin:20px 0;"></div>
             <button class="btn btn-hijau" id="btn-mulai" onclick="mulaiKuis()" disabled>▶️ MULAI PERMAINAN</button>
         </div>
 
-        <!-- === LAYAR SISWA: MASUK === -->
+        <!-- === SISWA === -->
         <div id="layar-siswa-masuk" class="layar">
             <h2>🔑 Masuk ke Ruang</h2>
-            <p id="info-ruang" style="color:#2980b9; font-weight:bold; margin-bottom:10px;"></p>
-            <input type="text" id="kode-masuk" placeholder="Masukkan Kode Ruang" maxlength="6" style="text-align:center; font-size:1.3rem; letter-spacing:4px;">
+            <p style="color:#2980b9; font-weight:bold;">Kode Ruang: <span id="kode-dari-link"></span></p>
             <input type="text" id="nama-saya" placeholder="Nama Lengkap Anda">
-            <button class="btn btn-hijau" onclick="cekKode()">Lanjut →</button>
-            <p id="pesan-salah" style="color:#e74c3c; margin-top:10px; display:none;">Kode tidak cocok! Coba lagi atau tanyakan ke guru</p>
+            <button class="btn btn-hijau" onclick="masukKeTim()">Lanjut →</button>
+            <p id="pesan-salah" style="color:red; margin-top:10px; display:none;">Nama sudah dipakai atau data belum siap, coba lagi</p>
         </div>
 
-        <!-- === LAYAR SISWA: PILIH TIM === -->
         <div id="layar-pilih-tim" class="layar">
             <h2>👥 Pilih Tim Anda</h2>
             <p style="color:#666; font-size:0.9rem;">Klik nama tim untuk bergabung</p>
-            <div id="daftar-tim-siswa"></div>
+            <div id="daftar-tim-pilihan"></div>
         </div>
 
-        <!-- === LAYAR TUNGGU === -->
         <div id="layar-tunggu" class="layar">
             <h2>⏳ Menunggu Mulai</h2>
-            <div style="background:#fff3cd; padding:15px; border-radius:10px; margin:15px 0;">
-                <p id="info-saya" style="margin:0;"></p>
+            <div style="background:#fff3cd; padding:15px; border-radius:10px;">
+                <p id="info-saya"></p>
             </div>
             <p style="text-align:center; color:#888; margin-top:30px;">Tunggu guru menekan tombol MULAI...</p>
         </div>
 
-        <!-- === LAYAR BERMAIN === -->
+        <!-- === BERMAIN === -->
         <div id="layar-bermain" class="layar">
             <div class="info-atas">
-                <span id="nomor-soal"></span>
-                <span class="timer" id="tampil-waktu"></span>
+                <span id="info-soal-ke"></span>
+                <span class="timer" id="tampil-timer"></span>
             </div>
+            <div class="soal-box" id="teks-soal-guru" style="display:none;"></div>
+            <p id="petunjuk-siswa" style="text-align:center; color:#666;">Lihat soal di layar/papan tulis</p>
             
-            <div class="soal-box" id="teks-soal"></div>
-
             <div class="tombol-jwb-besar">
                 <button class="btn-jwb btn-benar" id="jwb-benar" onclick="pilihJawab(true)">✅ BENAR</button>
                 <button class="btn-jwb btn-salah" id="jwb-salah" onclick="pilihJawab(false)">❌ SALAH</button>
             </div>
-
             <div id="hasil-soal" style="margin-top:25px; display:none;"></div>
         </div>
 
-        <!-- === LAYAR HASIL === -->
+        <!-- === HASIL === -->
         <div id="layar-akhir" class="layar">
             <h2 style="text-align:center;">🎉 Hasil Akhir</h2>
-            <div id="status-simpan" class="status-simpan">Menyimpan hasil...</div>
+            <div id="status-simpan" style="text-align:center; padding:10px; border-radius:10px; margin-bottom:15px; background:#d4edda; color:#155724; font-weight:bold;">✅ Tersimpan!</div>
             <div class="peringkat" id="daftar-hasil"></div>
             <button class="btn btn-biru" onclick="location.reload()" style="margin-top:20px;">🔄 Mulai Baru</button>
         </div>
     </div>
 
 <script>
-// === KONFIGURASI ===
-const SHEET_ID = "1FZ8Uj3l5IuCFchi-NnuCtjyrbTSN8sU8Nb6_EGLoIY0";
+// === KONFIGURASI — Tempel URL Apps Script kamu di sini ===
 const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4Ee3PNxRqIt4wCtKL9wZvEVSzl7jcoJEfhG4_rhmYlhfVeFFT-2pE_UxeN9rK6djcCA/exe";
-const URL_DATASISWA = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=datasiswa`;
-const WAKTU_PER_SOAL = 20;
+const WAKTU_SOAL = 20;
 
-// === DATA GLOBAL ===
-let peran = null; // 'guru' / 'siswa'
+// === DATA ===
+let peran = null;
 let kodeRuang = null;
 let namaSiswa = null;
 let timSaya = null;
-let daftarTim = []; // {nama, anggota:[{nama, poin:0}], jawaban:null}
+let daftarTim = [];
 let daftarSoal = [];
 let soalKe = 0;
 let timer = null;
-let sisaWaktu = 0;
 let sudahJawab = false;
-let polling = null;
+let sinkron = null;
 
 // === INISIALISASI ===
 document.addEventListener("DOMContentLoaded", async () => {
-    await muatSoalDariCSV();
+    await muatSoal();
     
-    // Baca parameter URL: ?siswa=KODERUANG
     const params = new URLSearchParams(window.location.search);
-    const kodeDariLink = params.get('siswa');
+    const kodeLink = params.get('siswa');
     
-    if (kodeDariLink) {
-        // Langsung masuk sebagai siswa
+    if (kodeLink) {
         peran = 'siswa';
-        kodeRuang = kodeDariLink;
-        tampilLayarSiswaMasuk();
+        kodeRuang = kodeLink;
+        document.getElementById('kode-dari-link').textContent = kodeRuang;
+        tampilLayar("siswa-masuk");
     } else {
-        // Buka sebagai guru
         peran = 'guru';
         buatRuang();
         tampilLayar("guru");
     }
 });
 
-// === GURU: BUAT RUANG ===
-function buatRuang() {
+// === GURU ===
+async function buatRuang() {
     kodeRuang = Math.floor(100000 + Math.random() * 900000).toString();
     daftarTim = [];
     
-    // Tampil kode & link
     document.getElementById("kotak-kode").style.display = "block";
     document.getElementById("tampil-kode").textContent = kodeRuang;
     
-    const linkSiswa = window.location.href.split('?')[0] + '?siswa=' + kodeRuang;
-    document.getElementById("link-siswa-teks").textContent = linkSiswa;
+    const link = window.location.href.split('?')[0] + '?siswa=' + kodeRuang;
+    document.getElementById("link-siswa").textContent = link;
     
-    simpanKodeKeSheet();
+    await kirimKeSheet({aksi:"buatRuang", kode:kodeRuang, tim:daftarTim});
+    mulaiPantauUpdate();
 }
 
-async function simpanKodeKeSheet() {
-    try {
-        await fetch(APPSCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                aksi: "buatRuang",
-                kode: kodeRuang,
-                tim: daftarTim,
-                waktu: new Date().toLocaleString("id-ID")
-            })
-        });
-    } catch (e) { console.log("Simpan ruang:", e); }
-}
-
-function tambahTim() {
-    const input = document.getElementById("input-nama-tim");
-    const nama = input.value.trim();
-    if (!nama) return alert("Ketik nama tim dulu!");
-    if (daftarTim.some(t => t.nama === nama)) return alert("Tim sudah ada!");
+async function tambahTim() {
+    const nama = document.getElementById("nama-tim-baru").value.trim();
+    if (!nama) return alert("Isi nama tim!");
+    if (daftarTim.some(t => t.nama === nama)) return alert("Sudah ada!");
     
-    daftarTim.push({ nama, anggota: [], jawaban: null });
-    input.value = "";
+    daftarTim.push({nama, anggota:[], jawaban:null});
+    document.getElementById("nama-tim-baru").value = "";
+    
+    await kirimKeSheet({aksi:"buatRuang", kode:kodeRuang, tim:daftarTim});
     tampilDaftarTimGuru();
-    perbaruiSheet();
 }
 
 function tampilDaftarTimGuru() {
     const wadah = document.getElementById("daftar-tim-guru");
-    wadah.innerHTML = daftarTim.map((tim, i) => `
+    wadah.innerHTML = daftarTim.map((t, i) => `
         <div class="kartu-tim">
-            <div class="nama-tim">${tim.nama}</div>
-            <div class="jumlah-anggota">${tim.anggota.length} anggota bergabung</div>
+            <div class="nama-tim">${t.nama}</div>
+            <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
             <div class="daftar-anggota">
-                ${tim.anggota.length === 0 
-                    ? '<span style="color:#999; font-size:0.85rem;">Belum ada siswa</span>' 
-                    : tim.anggota.map(a => `<span class="baju-nama">${a.nama}</span>`).join("")}
+                ${t.anggota.length === 0 ? '<span style="color:#999;">Belum ada</span>' :
+                  t.anggota.map(a => `<span class="baju-nama">${a.nama}</span>`).join("")}
             </div>
         </div>
     `).join("");
     
-    const adaAnggota = daftarTim.some(t => t.anggota.length > 0);
-    document.getElementById("btn-mulai").disabled = !adaAnggota;
-    
     const total = daftarTim.reduce((s,t) => s + t.anggota.length, 0);
-    document.getElementById("status-siswa-masuk").innerHTML = 
-        `<p>✅ Total <strong>${total}</strong> siswa sudah bergabung</p>`;
+    document.getElementById("status-masuk").innerHTML = `<p>✅ <strong>${total}</strong> siswa sudah bergabung</p>`;
+    document.getElementById("btn-mulai").disabled = total === 0;
 }
 
 function salinSemua() {
-    const link = document.getElementById("link-siswa-teks").textContent;
-    const teks = `Kode Ruang: ${kodeRuang}\nLink: ${link}`;
-    navigator.clipboard.writeText(teks)
-        .then(() => alert("Kode & Link disalin! Kirim ke siswa ya"));
+    const teks = `Kode: ${kodeRuang}\nLink: ${document.getElementById("link-siswa").textContent}`;
+    navigator.clipboard.writeText(teks).then(() => alert("Disalin!"));
 }
 
-async function perbaruiSheet() {
-    try {
-        await fetch(APPSCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                aksi: "perbaruiTim",
-                kode: kodeRuang,
-                tim: daftarTim
-            })
-        });
-    } catch (e) { console.log("Perbarui:", e); }
-}
-
-// === SISWA: LANGSUNG MASUK DARI LINK ===
-function tampilLayarSiswaMasuk() {
-    document.getElementById("info-ruang").textContent = `Kode Ruang: ${kodeRuang}`;
-    document.getElementById("kode-masuk").value = kodeRuang;
-    tampilLayar("siswa-masuk");
-    mulaiAmbilData();
-}
-
-async function mulaiAmbilData() {
-    // Ambil data terbaru dari Sheet setiap 2 detik
-    polling = setInterval(async () => {
-        try {
-            const res = await fetch(APPSCRIPT_URL + "?kode=" + kodeRuang + "&_t=" + Date.now(), {
-                cache: "no-store"
-            });
-            // no-cors mode membuat res tidak bisa dibaca langsung, pakai fallback
-            // Untuk demo: guru & siswa saling kirim lewat sheet
-        } catch {}
+// Pantau update dari siswa setiap 2 detik
+function mulaiPantauUpdate() {
+    sinkron = setInterval(async () => {
+        const res = await kirimKeSheet({aksi:"ambilData", kode:kodeRuang});
+        if (res && res.tim) {
+            daftarTim = res.tim;
+            tampilDaftarTimGuru();
+        }
     }, 2000);
 }
 
-async function cekKode() {
-    const kode = document.getElementById("kode-masuk").value.trim();
+// === SISWA ===
+async function masukKeTim() {
     namaSiswa = document.getElementById("nama-saya").value.trim();
+    if (!namaSiswa) return alert("Isi nama dulu!");
     
-    if (!kode || !namaSiswa) return alert("Isi kode dan nama dulu!");
-    if (kode !== kodeRuang) {
+    // Ambil daftar tim dari sheet
+    const res = await kirimKeSheet({aksi:"ambilData", kode:kodeRuang});
+    if (!res || !res.tim) {
         document.getElementById("pesan-salah").style.display = "block";
         return;
     }
     
-    // Baca daftar tim — untuk demo, guru sudah set daftarTim
-    // Di versi lengkap: ambil dari Sheet
-    if (daftarTim.length === 0) {
-        daftarTim = [
-            { nama: "TIM A", anggota: [], jawaban: null },
-            { nama: "TIM B", anggota: [], jawaban: null },
-            { nama: "TIM C", anggota: [], jawaban: null }
-        ];
-    }
-    
+    daftarTim = res.tim;
     tampilLayar("pilih-tim");
-    tampilDaftarTimSiswa();
+    tampilPilihanTim();
 }
 
-function tampilDaftarTimSiswa() {
-    const wadah = document.getElementById("daftar-tim-siswa");
-    wadah.innerHTML = daftarTim.map((tim, i) => {
-        const sudahGabung = tim.anggota.some(a => a.nama === namaSiswa);
+function tampilPilihanTim() {
+    const wadah = document.getElementById("daftar-tim-pilihan");
+    wadah.innerHTML = daftarTim.map((t, i) => {
+        const sudah = t.anggota.some(a => a.nama === namaSiswa);
         return `
-            <div class="kartu-tim ${sudahGabung ? 'terpilih' : ''}" 
-                 onclick="pilihGabung(${i})">
-                <div class="nama-tim">${sudahGabung ? '✅ ' : ''}${tim.nama}</div>
-                <div class="jumlah-anggota">${tim.anggota.length} anggota</div>
+            <div class="kartu-tim ${sudah ? 'terpilih' : ''}" onclick="pilihGabung(${i})">
+                <div class="nama-tim">${sudah ? '✅ ' : ''}${t.nama}</div>
+                <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
                 <div class="daftar-anggota">
-                    ${tim.anggota.map(a => `<span class="baju-nama ${a.nama===namaSiswa?'saya':''}">${a.nama}</span>`).join("")}
+                    ${t.anggota.map(a => `<span class="baju-nama ${a.nama===namaSiswa?'saya':''}">${a.nama}</span>`).join("")}
                 </div>
             </div>
         `;
     }).join("");
 }
 
-function pilihGabung(idx) {
+async function pilihGabung(idx) {
+    // Cek sudah masuk?
     if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
         timSaya = idx;
-        tampilLayarTunggu();
+        tampilLayar("tunggu");
         return;
     }
     
-    const namaSudahAda = daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa));
-    if (namaSudahAda) return alert("Nama ini sudah masuk tim lain!");
+    // Kirim ke sheet
+    const res = await kirimKeSheet({
+        aksi: "gabungTim",
+        kode: kodeRuang,
+        idxTim: idx,
+        nama: namaSiswa
+    });
     
-    daftarTim[idx].anggota.push({ nama: namaSiswa, poin: 0 });
-    timSaya = idx;
-    
-    // Kirim ke Sheet
-    perbaruiSheet();
-    
-    tampilLayarTunggu();
+    if (res && res.status === "ok") {
+        daftarTim = res.tim;
+        timSaya = idx;
+        tampilLayar("tunggu");
+        document.getElementById("info-saya").innerHTML = 
+            `✅ <strong>${namaSiswa}</strong><br>Bergabung di <strong>${daftarTim[idx].nama}</strong>`;
+    } else {
+        alert("Nama sudah dipakai! Gunakan nama lain.");
+    }
 }
 
-function tampilLayarTunggu() {
-    tampilLayar("tunggu");
-    document.getElementById("info-saya").innerHTML = 
-        `✅ <strong>${namaSiswa}</strong><br>Bergabung di <strong>${daftarTim[timSaya].nama}</strong><br>Menunggu guru...`;
-}
-
-// === MULAI PERMAINAN ===
+// === MULAI BERMAIN ===
 function mulaiKuis() {
-    if (daftarSoal.length === 0) return alert("Belum ada soal!");
+    if (sinkron) clearInterval(sinkron);
     soalKe = 0;
     tampilLayar("bermain");
+    if (peran === 'guru') {
+        document.getElementById("teks-soal-guru").style.display = "block";
+        document.getElementById("petunjuk-siswa").style.display = "none";
+    }
     tampilSoal();
 }
 
@@ -415,8 +343,8 @@ function tampilSoal() {
     sudahJawab = false;
     daftarTim.forEach(t => t.jawaban = null);
     
-    document.getElementById("nomor-soal").textContent = `Soal ${soalKe+1}/${daftarSoal.length}`;
-    document.getElementById("teks-soal").textContent = daftarSoal[soalKe].teks;
+    document.getElementById("info-soal-ke").textContent = `Soal ${soalKe+1}/${daftarSoal.length}`;
+    document.getElementById("teks-soal-guru").textContent = daftarSoal[soalKe].teks;
     document.getElementById("hasil-soal").style.display = "none";
     
     document.getElementById("jwb-benar").disabled = false;
@@ -424,16 +352,13 @@ function tampilSoal() {
     document.getElementById("jwb-benar").classList.remove("dipilih");
     document.getElementById("jwb-salah").classList.remove("dipilih");
     
-    sisaWaktu = WAKTU_PER_SOAL;
-    document.getElementById("tampil-waktu").textContent = sisaWaktu + "s";
+    sisaWaktu = WAKTU_SOAL;
+    document.getElementById("tampil-timer").textContent = sisaWaktu + "s";
     if (timer) clearInterval(timer);
     timer = setInterval(() => {
         sisaWaktu--;
-        document.getElementById("tampil-waktu").textContent = sisaWaktu + "s";
-        if (sisaWaktu <= 0) {
-            clearInterval(timer);
-            waktuHabis();
-        }
+        document.getElementById("tampil-timer").textContent = sisaWaktu + "s";
+        if (sisaWaktu <= 0) { clearInterval(timer); waktuHabis(); }
     }, 1000);
 }
 
@@ -446,9 +371,7 @@ function pilihJawab(pilihan) {
     document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === true);
     document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === false);
     
-    if (timSaya !== null) {
-        daftarTim[timSaya].jawaban = pilihan;
-    }
+    if (timSaya !== null) daftarTim[timSaya].jawaban = pilihan;
 }
 
 function waktuHabis() {
@@ -460,80 +383,40 @@ function waktuHabis() {
         }
     });
     
-    perbaruiSheet();
-    
-    const jawabanSayaBenar = timSaya !== null && daftarTim[timSaya]?.jawaban === soal.jawaban;
+    const benar = timSaya !== null && daftarTim[timSaya]?.jawaban === soal.jawaban;
     const kotak = document.getElementById("hasil-soal");
     kotak.style.display = "block";
     kotak.innerHTML = `
-        <div style="padding:15px; border-radius:10px; background:${jawabanSayaBenar?'#d4edda':'#f8d7da'}; color:${jawabanSayaBenar?'#155724':'#721c24'};">
-            ${jawabanSayaBenar ? '✅ BENAR!' : '❌ SALAH!'}<br>
-            ${soal.penjelasan}
-            ${timSaya !== null ? `<br>Poin Anda: ⭐ ${daftarTim[timSaya].anggota.find(a => a.nama === namaSiswa)?.poin || 0}` : ''}
+        <div style="padding:15px; border-radius:10px; background:${benar?'#d4edda':'#f8d7da'}; color:${benar?'#155724':'#721c24'};">
+            ${benar?'✅ BENAR!':'❌ SALAH!'}<br>${soal.penjelasan}
+            ${timSaya!==null?`<br>Poin Anda: ⭐ ${daftarTim[timSaya].anggota.find(a=>a.nama===namaSiswa)?.poin||0}`:''}
         </div>
     `;
     
     setTimeout(() => {
         soalKe++;
-        if (soalKe < daftarSoal.length) {
-            tampilSoal();
-        } else {
-            selesai();
-        }
+        if (soalKe < daftarSoal.length) tampilSoal();
+        else selesai();
     }, 3000);
 }
 
-function selesai() {
+async function selesai() {
     if (timer) clearInterval(timer);
-    if (polling) clearInterval(polling);
     tampilLayar("akhir");
     
     const semuaSiswa = [];
-    daftarTim.forEach(tim => {
-        tim.anggota.forEach(a => {
-            semuaSiswa.push({ nama: a.nama, poin: a.poin, tim: tim.nama });
-        });
-    });
-    semuaSiswa.sort((a, b) => b.poin - a.poin);
+    daftarTim.forEach(t => t.anggota.forEach(a => semuaSiswa.push({nama:a.nama, poin:a.poin, tim:t.nama})));
+    semuaSiswa.sort((a,b) => b.poin - a.poin);
     
-    document.getElementById("daftar-hasil").innerHTML = semuaSiswa.length === 0
-        ? "<p style='text-align:center; color:#666;'>Belum ada data</p>"
-        : semuaSiswa.map((s, i) => {
-            let kelas = "", medali = "";
-            if (i===0) { kelas="p1"; medali="🥇"; }
-            else if (i===1) { kelas="p2"; medali="🥈"; }
-            else if (i===2) { kelas="p3"; medali="🥉"; }
-            return `
-                <div class="item-p ${kelas}">
-                    <div><span class="medali">${medali || (i+1)+'.'}</span> ${s.nama}</div>
-                    <div><strong>⭐ ${s.poin}</strong> poin — ${s.tim}</div>
-                </div>
-            `;
-        }).join("");
+    document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s,i) => {
+        let kls="", mdl="";
+        if(i===0){kls="p1";mdl="🥇";}
+        else if(i===1){kls="p2";mdl="🥈";}
+        else if(i===2){kls="p3";mdl="🥉";}
+        return `<div class="item-p ${kls}"><div>${mdl||(i+1)+'.'} ${s.nama}</div><div>⭐ ${s.poin} — ${s.tim}</div></div>`;
+    }).join("");
     
-    simpanKeSheet(semuaSiswa);
-}
-
-async function simpanKeSheet(data) {
-    if (!APPSCRIPT_URL) return;
-    try {
-        document.getElementById("status-simpan").className = "status-simpan berhasil";
-        document.getElementById("status-simpan").textContent = "✅ Hasil tersimpan!";
-        await fetch(APPSCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                aksi: "simpanHasil",
-                kode: kodeRuang,
-                siswa: data,
-                waktu: new Date().toLocaleString("id-ID")
-            })
-        });
-    } catch {
-        document.getElementById("status-simpan").className = "status-simpan gagal";
-        document.getElementById("status-simpan").textContent = "⚠️ Tersimpan lokal";
-    }
+    await kirimKeSheet({aksi:"simpanHasil", kode:kodeRuang, siswa:semuaSiswa, waktu:new Date().toLocaleString("id-ID")});
 }
 
 // === FUNGSI BANTU ===
@@ -542,35 +425,39 @@ function tampilLayar(nama) {
     document.getElementById(`layar-${nama}`).classList.add("aktif");
 }
 
-async function muatSoalDariCSV() {
+async function kirimKeSheet(data) {
     try {
-        const res = await fetch("soal.csv", { cache: "no-store" });
-        if (!res.ok) throw new Error("Tidak ada soal.csv");
-        const teks = await res.text();
-        const baris = teks.split("\n").map(r => {
-            let hasil = [], bagian = "", dalamKutip = false;
-            for (let c of r) {
-                if (c === '"') dalamKutip = !dalamKutip;
-                else if (c === "," && !dalamKutip) { hasil.push(bagian.trim()); bagian = ""; }
-                else bagian += c;
-            }
-            hasil.push(bagian.trim());
-            return hasil;
+        const res = await fetch(APPSCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify(data)
         });
+        return {status:"ok"}; // no-cors tidak baca respon, asumsikan berhasil
+    } catch(e) { return null; }
+}
+
+async function muatSoal() {
+    try {
+        const res = await fetch("soal.csv", {cache:"no-store"});
+        if (!res.ok) throw 0;
+        const teks = await res.text();
+        const baris = teks.split("\n");
         daftarSoal = [];
-        for (let i = 1; i < baris.length; i++) {
-            const k = baris[i];
-            if (!k || k.length < 2) continue;
-            const teks = k[0].replace(/^"|"$/g, "");
-            const jawab = String(k[1]).toUpperCase().replace(/^"|"$/g, "") === "BENAR";
-            const jelas = k[2]?.replace(/^"|"$/g, "") || (jawab ? "✅ Benar!" : "❌ Salah!");
-            if (teks) daftarSoal.push({ teks, jawaban: jawab, penjelasan: jelas });
+        for(let i=1;i<baris.length;i++){
+            const b = baris[i].split(",").map(x=>x.trim().replace(/^"|"$/g,""));
+            if(b.length<2||!b[0])continue;
+            daftarSoal.push({
+                teks:b[0],
+                jawaban:b[1].toUpperCase()==="BENAR",
+                penjelasan:b[2]||(b[1]==="BENAR"?"✅ Benar!":"❌ Salah!")
+            });
         }
     } catch {
         daftarSoal = [
-            { teks: "CPU adalah otak dari komputer", jawaban: true, penjelasan: "✅ BENAR: CPU memproses semua perintah dan data." },
-            { teks: "RAM menyimpan data permanen meski dimatikan", jawaban: false, penjelasan: "❌ SALAH: Data di RAM hilang saat dimatikan." },
-            { teks: "Algoritma adalah langkah logis menyelesaikan masalah", jawaban: true, penjelasan: "✅ BENAR: Itulah definisi dasar algoritma." }
+            {teks:"CPU adalah otak komputer", jawaban:true, penjelasan:"✅ BENAR: CPU memproses semua perintah."},
+            {teks:"Data di RAM tetap ada setelah dimatikan", jawaban:false, penjelasan:"❌ SALAH: RAM bersifat sementara."},
+            {teks:"Algoritma adalah langkah menyelesaikan masalah", jawaban:true, penjelasan:"✅ BENAR: Itu definisi algoritma."}
         ];
     }
 }

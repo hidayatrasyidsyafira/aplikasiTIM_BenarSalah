@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Sinkron Penuh</title>
+    <title>Kuis Benar/Salah — Mode Tim</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -130,8 +130,8 @@
             <h2>🔑 Masuk ke Ruang</h2>
             <p style="color:#2980b9; font-weight:bold;">Kode Ruang: <span id="kode-dari-link"></span></p>
             <input type="text" id="nama-saya" placeholder="Nama Lengkap Anda">
-            <button class="btn btn-hijau" id="btn-lanjut-nama" onclick="ambilDaftarTim()">Lanjut →</button>
-            <p id="pesan-salah" class="pesan gagal">Kode tidak ditemukan atau belum siap, tanyakan ke guru</p>
+            <button class="btn btn-hijau" id="btn-lanjut-nama" onclick="cobaMasuk()">Lanjut →</button>
+            <p id="pesan-salah" class="pesan gagal">Kode belum siap, tunggu guru buat ruang lalu coba lagi</p>
         </div>
 
         <div id="layar-pilih-tim" class="layar">
@@ -175,7 +175,10 @@
     </div>
 
 <script>
-// === KONFIGURASI — Tempel URL Apps Script kamu di sini ===
+// ==============================================
+// === PASTIKAN INI DIISI DENGAN BENAR! ===
+// ==============================================
+const SHEET_ID = "1FZ8Uj3l5IuCFchi-NnuCtjyrbTSN8sU8Nb6_EGLoIY0";
 const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHumfJu2Agl0Sk65WZNXFtgcXPmYXgAw4OcqyA8IM7NjNUkNc2DZfC2IbaJIHVmwgS5g/exec";
 const WAKTU_SOAL = 20;
 
@@ -190,6 +193,7 @@ let soalKe = 0;
 let timer = null;
 let sudahJawab = false;
 let sinkron = null;
+let sudahGabung = false;
 
 // === INISIALISASI ===
 document.addEventListener("DOMContentLoaded", async () => {
@@ -269,46 +273,58 @@ function mulaiPantauUpdate() {
 
 async function ambilDataTerbaru() {
     try {
-        // Baca langsung dari Google Sheet lewat CSV
         const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
         if (!res.ok) return;
-        const teks = await res.text();
+        let teks = await res.text();
         const mulai = teks.indexOf('{');
         if (mulai === -1) return;
-        const data = eval('(' + teks.slice(mulai) + ')');
-        const baris = data.table.rows.find(r => String(r.c?.[0]?.v) === String(kodeRuang));
-        if (!baris || !baris.c?.[1]?.v) return;
+        teks = teks.slice(mulai);
+        // Bersihkan teks agar aman diparse
+        teks = teks.replace(/google\.visualization\.Query\.setResponse\(/, '').replace(/\);\s*$/, '');
+        const data = JSON.parse(teks);
+        
+        if (!data.table || !data.table.rows) return;
+        
+        const baris = data.table.rows.find(r => {
+          if (!r.c || !r.c[0]) return false;
+          return String(r.c[0].v) === String(kodeRuang);
+        });
+        
+        if (!baris || !baris.c || !baris.c[1] || !baris.c[1].v) return;
+        
         daftarTim = JSON.parse(baris.c[1].v);
         tampilDaftarTimGuru();
+        
+        // Jika siswa sudah gabung, perbarui juga di sisi siswa
+        if (sudahGabung && peran === 'siswa') {
+          tampilPilihanTim();
+        }
+        
     } catch (e) {
-        // Lewati jika gagal baca
+        console.log("Ambil data:", e.message);
     }
 }
 
 // === SISWA ===
-async function ambilDaftarTim() {
+async function cobaMasuk() {
     namaSiswa = document.getElementById("nama-saya").value.trim();
     if (!namaSiswa) return alert("Isi nama dulu!");
     
-    // Baca langsung dari Google Sheet
-    try {
-        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
-        if (!res.ok) throw 0;
-        const teks = await res.text();
-        const mulai = teks.indexOf('{');
-        if (mulai === -1) throw 0;
-        const data = eval('(' + teks.slice(mulai) + ')');
-        const baris = data.table.rows.find(r => String(r.c?.[0]?.v) === String(kodeRuang));
-        if (!baris || !baris.c?.[1]?.v) throw 0;
-        
-        daftarTim = JSON.parse(baris.c[1].v);
-        tampilLayar("pilih-tim");
-        tampilPilihanTim();
-        
-    } catch {
+    document.getElementById("pesan-salah").style.display = "none";
+    
+    // Coba baca data dari sheet
+    await ambilDataTerbaru();
+    
+    if (daftarTim.length === 0) {
         document.getElementById("pesan-salah").style.display = "block";
-        setTimeout(() => document.getElementById("pesan-salah").style.display = "none", 3000);
+        return;
     }
+    
+    tampilLayar("pilih-tim");
+    tampilPilihanTim();
+    
+    // Mulai pantau update
+    mulaiPantauUpdate();
 }
 
 function tampilPilihanTim() {
@@ -333,20 +349,21 @@ async function pilihGabung(idx) {
     // Cek sudah masuk?
     if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
         timSaya = idx;
+        sudahGabung = true;
         tampilLayarTunggu();
         return;
     }
     
-    // Cek nama ganda di tim lain
+    // Cek nama ganda
     const sudahAda = daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa));
     if (sudahAda) {
-        pesan.textContent = "⚠️ Nama sudah dipakai di tim lain!";
+        pesan.textContent = "⚠️ Nama sudah dipakai!";
         pesan.className = "pesan gagal";
         pesan.style.display = "block";
         return;
     }
     
-    // Tambahkan lokal dulu
+    // Tambahkan
     daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
     
     // Kirim ke Sheet
@@ -358,6 +375,7 @@ async function pilihGabung(idx) {
     });
     
     timSaya = idx;
+    sudahGabung = true;
     tampilLayarTunggu();
 }
 
@@ -474,7 +492,10 @@ async function kirimKeSheet(data) {
             body: JSON.stringify(data)
         });
         return {status:"ok"};
-    } catch(e) { return null; }
+    } catch(e) { 
+        console.log("Kirim:", e);
+        return null; 
+    }
 }
 
 async function muatSoal() {

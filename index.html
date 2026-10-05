@@ -304,14 +304,12 @@ async function ambilDataTerbaru() {
         const timBaru = JSON.parse(baris.c[1].v);
         const status = baris.c[3]?.v || "SIAP";
         
-        // Perbarui daftar tim
         if (JSON.stringify(timBaru) !== JSON.stringify(daftarTim)) {
             daftarTim = timBaru;
             if (peran === 'guru') {
                 tampilDaftarTimGuru();
             } else if (peran === 'siswa' && sudahGabung) {
                 tampilPilihanTim();
-                // Perbarui poin siswa
                 const saya = daftarTim.flatMap(t => t.anggota).find(a => a.nama === namaSiswa);
                 if (saya) {
                     poinSaya = saya.poin || 0;
@@ -323,7 +321,6 @@ async function ambilDataTerbaru() {
             }
         }
         
-        // Cek apakah sudah mulai
         if (status === "MULAI" && !sudahMulai) {
             sudahMulai = true;
             if (peran === 'siswa' && sudahGabung) {
@@ -481,15 +478,16 @@ function pilihJawab(pilihan) {
 
 async function waktuHabis() {
     const soal = daftarSoal[soalKe];
-    const jawabanBenar = String(soal.jawaban).toLowerCase() === "true";
+    const jawabanBenar = Boolean(soal.jawaban); // Pastikan tipe boolean murni
     
-    // Hitung poin: tim yang jawabannya cocok = semua anggota dapat +1
-    daftarTim.forEach((tim, idx) => {
-        const jawabanTim = String(tim.jawaban).toLowerCase() === "true";
-        if (jawabanTim === jawabanBenar) {
+    // Hitung poin: PERBAIKAN UTAMA — bandingkan sebagai boolean murni
+    daftarTim.forEach((tim) => {
+        const jawabanTim = tim.jawaban !== null ? Boolean(tim.jawaban) : null;
+        const benar = jawabanTim === jawabanBenar;
+        
+        if (benar) {
             tim.anggota.forEach(a => {
                 a.poin = (a.poin || 0) + 1;
-                // Perbarui poin saya jika ini saya
                 if (a.nama === namaSiswa) {
                     poinSaya = a.poin;
                 }
@@ -500,9 +498,12 @@ async function waktuHabis() {
     // Simpan ke Sheet
     await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
     
-    // Tampilkan hasil
-    const benarSaya = timSaya !== null && daftarTim[timSaya]?.jawaban !== undefined &&
-        String(daftarTim[timSaya].jawaban).toLowerCase() === String(jawabanBenar).toLowerCase();
+    // Cek jawaban saya
+    let benarSaya = false;
+    if (timSaya !== null && daftarTim[timSaya]) {
+        const jawabanSaya = daftarTim[timSaya].jawaban !== null ? Boolean(daftarTim[timSaya].jawaban) : null;
+        benarSaya = jawabanSaya === jawabanBenar;
+    }
     
     const kotak = document.getElementById("hasil-soal");
     kotak.style.display = "block";
@@ -515,7 +516,6 @@ async function waktuHabis() {
         </div>
     `;
     
-    // Perbarui tampilan poin
     if (peran === 'siswa' && sudahMulai) {
         document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
     }
@@ -590,17 +590,18 @@ async function muatSoal() {
         for(let i=1;i<baris.length;i++){
             const b = baris[i].split(",").map(x=>x.trim().replace(/^"|"$/g,""));
             if(b.length<2||!b[0])continue;
+            const jawabanMentah = String(b[1]).toUpperCase().trim();
             daftarSoal.push({
-                teks:b[0],
-                jawaban:String(b[1]).toUpperCase()==="BENAR",
-                penjelasan:b[2]||(b[1]==="BENAR"?"✅ Benar!":"❌ Salah!")
+                teks: b[0],
+                jawaban: jawabanMentah === "BENAR", // Pastikan boolean murni
+                penjelasan: b[2] || (jawabanMentah === "BENAR" ? "✅ Benar!" : "❌ Salah!")
             });
         }
     } catch {
         daftarSoal = [
-            {teks:"CPU adalah otak komputer", jawaban:true, penjelasan:"✅ BENAR: CPU memproses semua perintah."},
-            {teks:"Data di RAM tetap ada setelah dimatikan", jawaban:false, penjelasan:"❌ SALAH: RAM bersifat sementara."},
-            {teks:"Algoritma adalah langkah menyelesaikan masalah", jawaban:true, penjelasan:"✅ BENAR: Itu definisi algoritma."}
+            {teks:"CPU adalah otak komputer", jawaban:true, penjelasan:"✅ BENAR: CPU memproses semua perintah dan data."},
+            {teks:"Data di RAM tetap ada setelah dimatikan", jawaban:false, penjelasan:"❌ SALAH: Data di RAM hilang saat dimatikan."},
+            {teks:"Algoritma adalah langkah menyelesaikan masalah", jawaban:true, penjelasan:"✅ BENAR: Itulah definisi dasar algoritma."}
         ];
     }
 }

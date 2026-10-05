@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Poin Diperbaiki</title>
+    <title>Kuis Benar/Salah — Poin Tetap Tersimpan</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -191,6 +191,7 @@ let peran = null;
 let kodeRuang = null;
 let namaSiswa = null;
 let timSaya = null;
+let indeksAnggotaSaya = null; // Simpan posisi saya di tim
 let daftarTim = [];
 let daftarSoal = [];
 let soalKe = 0;
@@ -201,6 +202,7 @@ let sudahGabung = false;
 let sudahMulai = false;
 let poinSaya = 0;
 let jawabanSaya = null;
+let sudahKirimPoin = false; // Cegah poin ter-reset
 
 // === INISIALISASI ===
 document.addEventListener("DOMContentLoaded", async () => {
@@ -307,18 +309,33 @@ async function ambilDataTerbaru() {
         const timBaru = JSON.parse(baris.c[1].v);
         const status = baris.c[3]?.v || "SIAP";
         
+        // === PENTING: JANGAN timpa poin yang sudah ada di lokal ===
+        if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
+            if (timBaru[timSaya] && timBaru[timSaya].anggota[indeksAnggotaSaya]) {
+                // Ambil poin dari Sheet HANYA jika belum pernah diset (0)
+                const poinDariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
+                if (!sudahKirimPoin || poinDariSheet === 0) {
+                    poinSaya = poinDariSheet;
+                }
+                // Kembalikan poin lokal ke data baru
+                timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
+            }
+        }
+        
         if (JSON.stringify(timBaru) !== JSON.stringify(daftarTim)) {
             daftarTim = timBaru;
             if (peran === 'guru') {
                 tampilDaftarTimGuru();
             } else if (peran === 'siswa' && sudahGabung) {
                 tampilPilihanTim();
-                const posisiSaya = daftarTim.findIndex(t => t.anggota.some(a => a.nama === namaSiswa));
-                if (posisiSaya !== -1) {
-                    timSaya = posisiSaya;
-                    const saya = daftarTim[timSaya].anggota.find(a => a.nama === namaSiswa);
-                    if (saya) {
-                        poinSaya = saya.poin || 0;
+                // Cari ulang posisi saya jika belum ketemu
+                if (timSaya === null || indeksAnggotaSaya === null) {
+                    const posisiSaya = daftarTim.findIndex(t => t.anggota.some(a => a.nama === namaSiswa));
+                    if (posisiSaya !== -1) {
+                        timSaya = posisiSaya;
+                        indeksAnggotaSaya = daftarTim[timSaya].anggota.findIndex(a => a.nama === namaSiswa);
+                        const saya = daftarTim[timSaya].anggota[indeksAnggotaSaya];
+                        poinSaya = saya?.poin || 0;
                         document.getElementById("poin-saya").textContent = poinSaya;
                         if (sudahMulai) {
                             document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
@@ -382,9 +399,9 @@ function tampilPilihanTim() {
 async function pilihGabung(idx) {
     if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
         timSaya = idx;
+        indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
         sudahGabung = true;
-        const saya = daftarTim[idx].anggota.find(a => a.nama === namaSiswa);
-        poinSaya = saya?.poin || 0;
+        poinSaya = daftarTim[idx].anggota[indeksAnggotaSaya].poin || 0;
         tampilLayarTunggu();
         return;
     }
@@ -397,6 +414,7 @@ async function pilihGabung(idx) {
     
     daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
     poinSaya = 0;
+    sudahKirimPoin = false;
     
     await kirimKeSheet({
         aksi: "gabungTim",
@@ -406,6 +424,7 @@ async function pilihGabung(idx) {
     });
     
     timSaya = idx;
+    indeksAnggotaSaya = daftarTim[idx].anggota.length - 1;
     sudahGabung = true;
     tampilLayarTunggu();
 }
@@ -491,20 +510,18 @@ async function waktuHabis() {
     const jawabanBenar = soal.jawaban;
     let benarSaya = false;
 
-    // === BAGIAN UTAMA: HITUNG POIN ===
+    // === HITUNG POIN SISWA ===
     if (peran === 'siswa' && jawabanSaya) {
         benarSaya = jawabanSaya === jawabanBenar;
         
         if (benarSaya) {
-            poinSaya += 1; // TAMBAH POIN
+            poinSaya += 1;
+            sudahKirimPoin = true; // Tandai poin sudah dikirim
         }
         
-        // === UPDATE POIN KE DAFTAR TIM ===
-        if (timSaya !== null && daftarTim[timSaya]) {
-            const indeksSiswa = daftarTim[timSaya].anggota.findIndex(a => a.nama === namaSiswa);
-            if (indeksSiswa !== -1) {
-                daftarTim[timSaya].anggota[indeksSiswa].poin = poinSaya;
-            }
+        // Simpan poin ke daftarTim — pakai indeks yang sudah disimpan
+        if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
+            daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
         }
     }
 
@@ -520,7 +537,7 @@ async function waktuHabis() {
         });
     }
 
-    // Simpan ke Sheet
+    // === KIRIM KE SHEET ===
     await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
     
     // Tampilkan hasil
@@ -534,7 +551,7 @@ async function waktuHabis() {
             ${peran === 'siswa' ? `<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>` : ''}
             <div class="debug">
                 Debug: Anda memilih ${jawabanSaya || 'belum memilih'} | Kunci: ${jawabanBenar}
-                ${benarSaya ? ' | Poin bertambah!' : ''}
+                ${benarSaya ? ' | Poin tersimpan!' : ''}
             </div>
         </div>
     `;

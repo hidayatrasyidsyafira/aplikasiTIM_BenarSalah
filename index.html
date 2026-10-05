@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Poin Terhitung</title>
+    <title>Kuis Benar/Salah — Diperbaiki</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -94,6 +94,7 @@
         .pesan { padding: 12px; border-radius: 10px; margin: 10px 0; display: none; }
         .pesan.gagal { background: #f8d7da; color: #721c24; }
         .hanya-guru { display: none; }
+        .debug { font-size: 0.75rem; color: #999; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -161,8 +162,8 @@
             <p id="petunjuk-siswa" style="text-align:center; color:#666;">Lihat soal di layar/papan tulis</p>
             
             <div class="tombol-jwb-besar">
-                <button class="btn-jwb btn-benar" id="jwb-benar" onclick="pilihJawab(true)">✅ BENAR</button>
-                <button class="btn-jwb btn-salah" id="jwb-salah" onclick="pilihJawab(false)">❌ SALAH</button>
+                <button class="btn-jwb btn-benar" id="jwb-benar" onclick="pilihJawab('BENAR')">✅ BENAR</button>
+                <button class="btn-jwb btn-salah" id="jwb-salah" onclick="pilihJawab('SALAH')">❌ SALAH</button>
             </div>
             <div id="hasil-soal" style="margin-top:25px; display:none;"></div>
         </div>
@@ -462,27 +463,28 @@ function tampilSoal() {
     }, 1000);
 }
 
+// === DIPERBAIKI: Pilihan pakai teks agar pasti sama ===
 function pilihJawab(pilihan) {
     if (sudahJawab) return;
     sudahJawab = true;
     
     document.getElementById("jwb-benar").disabled = true;
     document.getElementById("jwb-salah").disabled = true;
-    document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === true);
-    document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === false);
+    document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === 'BENAR');
+    document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === 'SALAH');
     
     if (timSaya !== null) {
-        daftarTim[timSaya].jawaban = pilihan;
+        daftarTim[timSaya].jawaban = pilihan; // Simpan sebagai teks "BENAR" atau "SALAH"
     }
 }
 
 async function waktuHabis() {
     const soal = daftarSoal[soalKe];
-    const jawabanBenar = Boolean(soal.jawaban); // Pastikan tipe boolean murni
+    const jawabanBenar = soal.jawaban; // Sudah "BENAR" atau "SALAH"
     
-    // Hitung poin: PERBAIKAN UTAMA — bandingkan sebagai boolean murni
+    // Hitung poin — BANDINGKAN TEKS LANGSUNG
     daftarTim.forEach((tim) => {
-        const jawabanTim = tim.jawaban !== null ? Boolean(tim.jawaban) : null;
+        const jawabanTim = tim.jawaban;
         const benar = jawabanTim === jawabanBenar;
         
         if (benar) {
@@ -501,7 +503,7 @@ async function waktuHabis() {
     // Cek jawaban saya
     let benarSaya = false;
     if (timSaya !== null && daftarTim[timSaya]) {
-        const jawabanSaya = daftarTim[timSaya].jawaban !== null ? Boolean(daftarTim[timSaya].jawaban) : null;
+        const jawabanSaya = daftarTim[timSaya].jawaban;
         benarSaya = jawabanSaya === jawabanBenar;
     }
     
@@ -510,9 +512,12 @@ async function waktuHabis() {
     kotak.innerHTML = `
         <div style="padding:15px; border-radius:10px; background:${benarSaya?'#d4edda':'#f8d7da'}; color:${benarSaya?'#155724':'#721c24'};">
             ${benarSaya?'✅ BENAR! +1 Poin':'❌ SALAH!'}<br>
-            Jawaban benar: <strong>${jawabanBenar ? 'BENAR' : 'SALAH'}</strong><br>
+            Jawaban benar: <strong>${jawabanBenar}</strong><br>
             ${soal.penjelasan}
             ${timSaya!==null?`<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>`:''}
+            <div class="debug">
+                Debug: Anda memilih ${daftarTim[timSaya]?.jawaban || 'belum memilih'} | Kunci: ${jawabanBenar}
+            </div>
         </div>
     `;
     
@@ -593,15 +598,15 @@ async function muatSoal() {
             const jawabanMentah = String(b[1]).toUpperCase().trim();
             daftarSoal.push({
                 teks: b[0],
-                jawaban: jawabanMentah === "BENAR", // Pastikan boolean murni
+                jawaban: jawabanMentah === "BENAR" ? "BENAR" : "SALAH", // Selalu "BENAR" atau "SALAH"
                 penjelasan: b[2] || (jawabanMentah === "BENAR" ? "✅ Benar!" : "❌ Salah!")
             });
         }
     } catch {
         daftarSoal = [
-            {teks:"CPU adalah otak komputer", jawaban:true, penjelasan:"✅ BENAR: CPU memproses semua perintah dan data."},
-            {teks:"Data di RAM tetap ada setelah dimatikan", jawaban:false, penjelasan:"❌ SALAH: Data di RAM hilang saat dimatikan."},
-            {teks:"Algoritma adalah langkah menyelesaikan masalah", jawaban:true, penjelasan:"✅ BENAR: Itulah definisi dasar algoritma."}
+            {teks:"CPU adalah otak komputer", jawaban:"BENAR", penjelasan:"✅ BENAR: CPU memproses semua perintah dan data."},
+            {teks:"Data di RAM tetap ada setelah dimatikan", jawaban:"SALAH", penjelasan:"❌ SALAH: Data di RAM hilang saat dimatikan."},
+            {teks:"Algoritma adalah langkah menyelesaikan masalah", jawaban:"BENAR", penjelasan:"✅ BENAR: Itulah definisi dasar algoritma."}
         ];
     }
 }

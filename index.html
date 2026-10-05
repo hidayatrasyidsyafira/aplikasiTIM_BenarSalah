@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Tim Muncul</title>
+    <title>Kuis Benar/Salah — Tim Tetap</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -95,7 +95,6 @@
         .pesan { padding: 12px; border-radius: 10px; margin: 10px 0; display: none; }
         .pesan.gagal { background: #f8d7da; color: #721c24; }
         .hanya-guru { display: none; }
-        .debug { font-size: 0.75rem; color: #999; margin-top: 8px; }
         .pesan-sukses { color: #2ecc71; font-size: 0.9rem; margin: 8px 0; display: none; }
     </style>
 </head>
@@ -208,6 +207,7 @@ let sudahMulai = false;
 let poinSaya = 0;
 let poinTersimpanDiSheet = 0;
 let jawabanSaya = null;
+let sedangKirim = false; // Cegah bentrok kirim & baca
 
 // === INISIALISASI ===
 document.addEventListener("DOMContentLoaded", async () => {
@@ -246,7 +246,10 @@ async function buatRuang() {
     const link = window.location.href.split('?')[0] + '?siswa=' + kodeRuang;
     document.getElementById("link-siswa").textContent = link;
     
+    sedangKirim = true;
     await kirimKeSheet({aksi:"buatRuang", kode:kodeRuang, tim:daftarTim, status:"SIAP"});
+    sedangKirim = false;
+    
     mulaiPantauUpdate();
 }
 
@@ -264,13 +267,15 @@ async function tambahTim() {
     daftarTim.push({nama, anggota:[], jawaban:null});
     document.getElementById("nama-tim-baru").value = "";
     
-    // Tampilkan DULU sebelum kirim — agar langsung muncul
+    // Tampilkan DULU — langsung muncul, tidak tunggu Sheet
     tampilDaftarTimGuru();
     
-    // Kirim ke Sheet
+    // Kirim ke Sheet — tandai sedang kirim
+    sedangKirim = true;
     await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
+    sedangKirim = false;
     
-    // Tampil pesan sukses
+    // Pesan sukses
     const pesan = document.getElementById("pesan-sukses-tim");
     pesan.style.display = "block";
     setTimeout(() => pesan.style.display = "none", 2000);
@@ -307,6 +312,7 @@ function salinSemua() {
 
 function mulaiPantauUpdate() {
     sinkron = setInterval(async () => {
+        if (sedangKirim) return; // ❌ JANGAN baca kalau sedang kirim!
         await ambilDataTerbaru();
     }, 2000);
 }
@@ -334,6 +340,30 @@ async function ambilDataTerbaru() {
         let timBaru = JSON.parse(baris.c[1].v);
         const status = baris.c[3]?.v || "SIAP";
         
+        // === GURU: Gabungkan data, JANGAN timpa kalau baru buat ===
+        if (peran === 'guru') {
+            // Kalau data lokal lebih banyak, simpan dulu lalu baca
+            if (daftarTim.length > timBaru.length) {
+                await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
+                return; // Tunggu putaran berikutnya
+            }
+            // Gabungkan poin
+            for (let t = 0; t < timBaru.length; t++) {
+                if (!daftarTim[t]) continue;
+                for (let a = 0; a < timBaru[t].anggota.length; a++) {
+                    const nama = timBaru[t].anggota[a].nama;
+                    const saya = daftarTim[t].anggota.find(x => x.nama === nama);
+                    if (saya) {
+                        timBaru[t].anggota[a].poin = Math.max(
+                            timBaru[t].anggota[a].poin || 0,
+                            saya.poin || 0
+                        );
+                    }
+                }
+            }
+        }
+        
+        // === SISWA: Lindungi poin lokal ===
         if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
             if (timBaru[timSaya] && timBaru[timSaya].anggota[indeksAnggotaSaya]) {
                 const poinDariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
@@ -439,12 +469,14 @@ async function pilihGabung(idx) {
     poinSaya = 0;
     poinTersimpanDiSheet = 0;
     
+    sedangKirim = true;
     await kirimKeSheet({
         aksi: "gabungTim",
         kode: kodeRuang,
         idxTim: idx,
         nama: namaSiswa
     });
+    sedangKirim = false;
     
     timSaya = idx;
     indeksAnggotaSaya = daftarTim[idx].anggota.length - 1;
@@ -477,12 +509,14 @@ async function mulaiKuis() {
     sudahMulai = true;
     if (sinkron) clearInterval(sinkron);
     
+    sedangKirim = true;
     await kirimKeSheet({
         aksi: "mulaiKuis",
         kode: kodeRuang,
         tim: daftarTim,
         status: "MULAI"
     });
+    sedangKirim = false;
     
     masukLayarBermain();
 }
@@ -550,7 +584,9 @@ async function waktuHabis() {
         });
     }
 
+    sedangKirim = true;
     await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
+    sedangKirim = false;
     
     const kotak = document.getElementById("hasil-soal");
     kotak.style.display = "block";
@@ -560,9 +596,6 @@ async function waktuHabis() {
             Jawaban benar: <strong>${jawabanBenar}</strong><br>
             ${soal.penjelasan}
             ${peran === 'siswa' ? `<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>` : ''}
-            <div class="debug">
-                Debug: Anda memilih ${jawabanSaya || 'belum memilih'} | Kunci: ${jawabanBenar}
-            </div>
         </div>
     `;
     
@@ -599,6 +632,7 @@ async function selesai() {
         return `<div class="item-p ${kls}"><div>${mdl||(i+1)+'.'} ${s.nama}</div><div>⭐ ${s.poin} — ${s.tim}</div></div>`;
     }).join("");
     
+    sedangKirim = true;
     await kirimKeSheet({
         aksi:"simpanHasil", 
         kode:kodeRuang, 
@@ -607,6 +641,7 @@ async function selesai() {
         waktu:new Date().toLocaleString("id-ID"),
         status:"SELESAI"
     });
+    sedangKirim = false;
 }
 
 function tampilLayar(nama) {

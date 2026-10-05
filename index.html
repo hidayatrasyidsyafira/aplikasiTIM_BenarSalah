@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Diperbaiki Total</title>
+    <title>Kuis Benar/Salah — Poin Diperbaiki</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -190,7 +190,7 @@ const WAKTU_SOAL = 20;
 let peran = null;
 let kodeRuang = null;
 let namaSiswa = null;
-let timSaya = null; // Indeks tim tempat saya bergabung
+let timSaya = null;
 let daftarTim = [];
 let daftarSoal = [];
 let soalKe = 0;
@@ -200,7 +200,7 @@ let sinkron = null;
 let sudahGabung = false;
 let sudahMulai = false;
 let poinSaya = 0;
-let jawabanSaya = null; // Simpan jawaban langsung di variabel siswa
+let jawabanSaya = null;
 
 // === INISIALISASI ===
 document.addEventListener("DOMContentLoaded", async () => {
@@ -313,10 +313,9 @@ async function ambilDataTerbaru() {
                 tampilDaftarTimGuru();
             } else if (peran === 'siswa' && sudahGabung) {
                 tampilPilihanTim();
-                // Cari posisi tim saya yang benar
                 const posisiSaya = daftarTim.findIndex(t => t.anggota.some(a => a.nama === namaSiswa));
                 if (posisiSaya !== -1) {
-                    timSaya = posisiSaya; // PERBAIKAN: pastikan timSaya selalu benar
+                    timSaya = posisiSaya;
                     const saya = daftarTim[timSaya].anggota.find(a => a.nama === namaSiswa);
                     if (saya) {
                         poinSaya = saya.poin || 0;
@@ -406,7 +405,7 @@ async function pilihGabung(idx) {
         nama: namaSiswa
     });
     
-    timSaya = idx; // Simpan indeks tim saya
+    timSaya = idx;
     sudahGabung = true;
     tampilLayarTunggu();
 }
@@ -420,7 +419,7 @@ function tampilLayarTunggu() {
 
 function masukLayarBermain() {
     soalKe = 0;
-    jawabanSaya = null; // Reset jawaban saat mulai
+    jawabanSaya = null;
     tampilLayar("bermain");
     if (peran === 'siswa') {
         document.getElementById("tampil-poin-saya").style.display = "inline";
@@ -448,7 +447,7 @@ async function mulaiKuis() {
 
 function tampilSoal() {
     sudahJawab = false;
-    jawabanSaya = null; // Reset jawaban per soal
+    jawabanSaya = null;
     daftarTim.forEach(t => t.jawaban = null);
     
     document.getElementById("info-soal-ke").textContent = `Soal ${soalKe+1}/${daftarSoal.length}`;
@@ -472,18 +471,16 @@ function tampilSoal() {
     }, 1000);
 }
 
-// === DIPERBAIKI: Simpan langsung ke jawabanSaya & tim ===
 function pilihJawab(pilihan) {
     if (sudahJawab) return;
     sudahJawab = true;
-    jawabanSaya = pilihan; // Simpan di variabel lokal siswa — DIJAMIN TERSIMPAN
+    jawabanSaya = pilihan;
     
     document.getElementById("jwb-benar").disabled = true;
     document.getElementById("jwb-salah").disabled = true;
     document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === 'BENAR');
     document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === 'SALAH');
     
-    // Simpan ke tim — pastikan timSaya ada
     if (timSaya !== null && daftarTim[timSaya]) {
         daftarTim[timSaya].jawaban = pilihan;
     }
@@ -492,33 +489,37 @@ function pilihJawab(pilihan) {
 async function waktuHabis() {
     const soal = daftarSoal[soalKe];
     const jawabanBenar = soal.jawaban;
-    
-    // Hitung poin — pakai jawabanSaya sebagai sumber utama
     let benarSaya = false;
+
+    // === BAGIAN UTAMA: HITUNG POIN ===
     if (peran === 'siswa' && jawabanSaya) {
         benarSaya = jawabanSaya === jawabanBenar;
+        
         if (benarSaya) {
-            poinSaya += 1;
-            // Tambah poin ke data tim
-            if (timSaya !== null && daftarTim[timSaya]) {
-                const anggota = daftarTim[timSaya].anggota.find(a => a.nama === namaSiswa);
-                if (anggota) anggota.poin = poinSaya;
+            poinSaya += 1; // TAMBAH POIN
+        }
+        
+        // === UPDATE POIN KE DAFTAR TIM ===
+        if (timSaya !== null && daftarTim[timSaya]) {
+            const indeksSiswa = daftarTim[timSaya].anggota.findIndex(a => a.nama === namaSiswa);
+            if (indeksSiswa !== -1) {
+                daftarTim[timSaya].anggota[indeksSiswa].poin = poinSaya;
             }
         }
     }
-    
-    // Hitung poin untuk SEMUA tim (guru)
-    daftarTim.forEach((tim, idx) => {
-        if (peran === 'guru' || idx !== timSaya) {
+
+    // Guru: hitung poin semua tim
+    if (peran === 'guru') {
+        daftarTim.forEach(tim => {
             const jawabanTim = tim.jawaban;
             if (jawabanTim === jawabanBenar) {
                 tim.anggota.forEach(a => {
                     a.poin = (a.poin || 0) + 1;
                 });
             }
-        }
-    });
-    
+        });
+    }
+
     // Simpan ke Sheet
     await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
     
@@ -533,6 +534,7 @@ async function waktuHabis() {
             ${peran === 'siswa' ? `<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>` : ''}
             <div class="debug">
                 Debug: Anda memilih ${jawabanSaya || 'belum memilih'} | Kunci: ${jawabanBenar}
+                ${benarSaya ? ' | Poin bertambah!' : ''}
             </div>
         </div>
     `;

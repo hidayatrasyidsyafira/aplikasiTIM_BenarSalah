@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuis Benar/Salah — Poin Terhitung</title>
+    <title>Kuis Benar/Salah — Poin Tetap Tersimpan</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -75,6 +75,7 @@
         .btn-jwb {
             flex: 1; padding: 40px 20px; font-size: 1.5rem; font-weight: bold;
             border: none; border-radius: 16px; cursor: pointer;
+            transition: all 0.2s;
         }
         .btn-jwb:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-benar { background: #2ecc71; color: white; }
@@ -94,6 +95,7 @@
         .pesan { padding: 12px; border-radius: 10px; margin: 10px 0; display: none; }
         .pesan.gagal { background: #f8d7da; color: #721c24; }
         .hanya-guru { display: none; }
+        .debug { font-size: 0.75rem; color: #999; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -161,8 +163,8 @@
             <p id="petunjuk-siswa" style="text-align:center; color:#666;">Lihat soal di layar/papan tulis</p>
             
             <div class="tombol-jwb-besar">
-                <button class="btn-jwb btn-benar" id="jwb-benar" onclick="pilihJawab(true)">✅ BENAR</button>
-                <button class="btn-jwb btn-salah" id="jwb-salah" onclick="pilihJawab(false)">❌ SALAH</button>
+                <button class="btn-jwb btn-benar" id="jwb-benar" onclick="pilihJawab('BENAR')">✅ BENAR</button>
+                <button class="btn-jwb btn-salah" id="jwb-salah" onclick="pilihJawab('SALAH')">❌ SALAH</button>
             </div>
             <div id="hasil-soal" style="margin-top:25px; display:none;"></div>
         </div>
@@ -189,6 +191,7 @@ let peran = null;
 let kodeRuang = null;
 let namaSiswa = null;
 let timSaya = null;
+let indeksAnggotaSaya = null; // Simpan posisi saya di tim
 let daftarTim = [];
 let daftarSoal = [];
 let soalKe = 0;
@@ -198,6 +201,8 @@ let sinkron = null;
 let sudahGabung = false;
 let sudahMulai = false;
 let poinSaya = 0;
+let jawabanSaya = null;
+let sudahKirimPoin = false; // Cegah poin ter-reset
 
 // === INISIALISASI ===
 document.addEventListener("DOMContentLoaded", async () => {
@@ -304,18 +309,37 @@ async function ambilDataTerbaru() {
         const timBaru = JSON.parse(baris.c[1].v);
         const status = baris.c[3]?.v || "SIAP";
         
+        // === PENTING: JANGAN timpa poin yang sudah ada di lokal ===
+        if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
+            if (timBaru[timSaya] && timBaru[timSaya].anggota[indeksAnggotaSaya]) {
+                // Ambil poin dari Sheet HANYA jika belum pernah diset (0)
+                const poinDariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
+                if (!sudahKirimPoin || poinDariSheet === 0) {
+                    poinSaya = poinDariSheet;
+                }
+                // Kembalikan poin lokal ke data baru
+                timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
+            }
+        }
+        
         if (JSON.stringify(timBaru) !== JSON.stringify(daftarTim)) {
             daftarTim = timBaru;
             if (peran === 'guru') {
                 tampilDaftarTimGuru();
             } else if (peran === 'siswa' && sudahGabung) {
                 tampilPilihanTim();
-                const saya = daftarTim.flatMap(t => t.anggota).find(a => a.nama === namaSiswa);
-                if (saya) {
-                    poinSaya = saya.poin || 0;
-                    document.getElementById("poin-saya").textContent = poinSaya;
-                    if (sudahMulai) {
-                        document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
+                // Cari ulang posisi saya jika belum ketemu
+                if (timSaya === null || indeksAnggotaSaya === null) {
+                    const posisiSaya = daftarTim.findIndex(t => t.anggota.some(a => a.nama === namaSiswa));
+                    if (posisiSaya !== -1) {
+                        timSaya = posisiSaya;
+                        indeksAnggotaSaya = daftarTim[timSaya].anggota.findIndex(a => a.nama === namaSiswa);
+                        const saya = daftarTim[timSaya].anggota[indeksAnggotaSaya];
+                        poinSaya = saya?.poin || 0;
+                        document.getElementById("poin-saya").textContent = poinSaya;
+                        if (sudahMulai) {
+                            document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
+                        }
                     }
                 }
             }
@@ -375,9 +399,9 @@ function tampilPilihanTim() {
 async function pilihGabung(idx) {
     if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
         timSaya = idx;
+        indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
         sudahGabung = true;
-        const saya = daftarTim[idx].anggota.find(a => a.nama === namaSiswa);
-        poinSaya = saya?.poin || 0;
+        poinSaya = daftarTim[idx].anggota[indeksAnggotaSaya].poin || 0;
         tampilLayarTunggu();
         return;
     }
@@ -390,6 +414,7 @@ async function pilihGabung(idx) {
     
     daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
     poinSaya = 0;
+    sudahKirimPoin = false;
     
     await kirimKeSheet({
         aksi: "gabungTim",
@@ -399,6 +424,7 @@ async function pilihGabung(idx) {
     });
     
     timSaya = idx;
+    indeksAnggotaSaya = daftarTim[idx].anggota.length - 1;
     sudahGabung = true;
     tampilLayarTunggu();
 }
@@ -412,6 +438,7 @@ function tampilLayarTunggu() {
 
 function masukLayarBermain() {
     soalKe = 0;
+    jawabanSaya = null;
     tampilLayar("bermain");
     if (peran === 'siswa') {
         document.getElementById("tampil-poin-saya").style.display = "inline";
@@ -439,6 +466,7 @@ async function mulaiKuis() {
 
 function tampilSoal() {
     sudahJawab = false;
+    jawabanSaya = null;
     daftarTim.forEach(t => t.jawaban = null);
     
     document.getElementById("info-soal-ke").textContent = `Soal ${soalKe+1}/${daftarSoal.length}`;
@@ -465,54 +493,66 @@ function tampilSoal() {
 function pilihJawab(pilihan) {
     if (sudahJawab) return;
     sudahJawab = true;
+    jawabanSaya = pilihan;
     
     document.getElementById("jwb-benar").disabled = true;
     document.getElementById("jwb-salah").disabled = true;
-    document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === true);
-    document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === false);
+    document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === 'BENAR');
+    document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === 'SALAH');
     
-    if (timSaya !== null) {
+    if (timSaya !== null && daftarTim[timSaya]) {
         daftarTim[timSaya].jawaban = pilihan;
     }
 }
 
 async function waktuHabis() {
     const soal = daftarSoal[soalKe];
-    const jawabanBenar = Boolean(soal.jawaban); // Pastikan tipe boolean murni
-    
-    // Hitung poin: PERBAIKAN UTAMA — bandingkan sebagai boolean murni
-    daftarTim.forEach((tim) => {
-        const jawabanTim = tim.jawaban !== null ? Boolean(tim.jawaban) : null;
-        const benar = jawabanTim === jawabanBenar;
+    const jawabanBenar = soal.jawaban;
+    let benarSaya = false;
+
+    // === HITUNG POIN SISWA ===
+    if (peran === 'siswa' && jawabanSaya) {
+        benarSaya = jawabanSaya === jawabanBenar;
         
-        if (benar) {
-            tim.anggota.forEach(a => {
-                a.poin = (a.poin || 0) + 1;
-                if (a.nama === namaSiswa) {
-                    poinSaya = a.poin;
-                }
-            });
+        if (benarSaya) {
+            poinSaya += 1;
+            sudahKirimPoin = true; // Tandai poin sudah dikirim
         }
-    });
-    
-    // Simpan ke Sheet
+        
+        // Simpan poin ke daftarTim — pakai indeks yang sudah disimpan
+        if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
+            daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
+        }
+    }
+
+    // Guru: hitung poin semua tim
+    if (peran === 'guru') {
+        daftarTim.forEach(tim => {
+            const jawabanTim = tim.jawaban;
+            if (jawabanTim === jawabanBenar) {
+                tim.anggota.forEach(a => {
+                    a.poin = (a.poin || 0) + 1;
+                });
+            }
+        });
+    }
+
+    // === KIRIM KE SHEET ===
     await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
     
-    // Cek jawaban saya
-    let benarSaya = false;
-    if (timSaya !== null && daftarTim[timSaya]) {
-        const jawabanSaya = daftarTim[timSaya].jawaban !== null ? Boolean(daftarTim[timSaya].jawaban) : null;
-        benarSaya = jawabanSaya === jawabanBenar;
-    }
-    
+    // Tampilkan hasil
     const kotak = document.getElementById("hasil-soal");
     kotak.style.display = "block";
     kotak.innerHTML = `
         <div style="padding:15px; border-radius:10px; background:${benarSaya?'#d4edda':'#f8d7da'}; color:${benarSaya?'#155724':'#721c24'};">
             ${benarSaya?'✅ BENAR! +1 Poin':'❌ SALAH!'}<br>
-            Jawaban benar: <strong>${jawabanBenar ? 'BENAR' : 'SALAH'}</strong><br>
+            Jawaban benar: <strong>${jawabanBenar}</strong><br>
             ${soal.penjelasan}
-            ${timSaya!==null?`<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>`:''}
+            ${peran === 'siswa' ? `<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>` : ''}
+            <div class="debug">
+                Debug: Anda memilih ${jawabanSaya || 'belum memilih'} | Kunci: ${jawabanBenar}
+                ${benarSaya ? ' | Poin tersimpan!' : ''}
+            </div>
         </div>
     `;
     
@@ -593,15 +633,15 @@ async function muatSoal() {
             const jawabanMentah = String(b[1]).toUpperCase().trim();
             daftarSoal.push({
                 teks: b[0],
-                jawaban: jawabanMentah === "BENAR", // Pastikan boolean murni
+                jawaban: jawabanMentah === "BENAR" ? "BENAR" : "SALAH",
                 penjelasan: b[2] || (jawabanMentah === "BENAR" ? "✅ Benar!" : "❌ Salah!")
             });
         }
     } catch {
         daftarSoal = [
-            {teks:"CPU adalah otak komputer", jawaban:true, penjelasan:"✅ BENAR: CPU memproses semua perintah dan data."},
-            {teks:"Data di RAM tetap ada setelah dimatikan", jawaban:false, penjelasan:"❌ SALAH: Data di RAM hilang saat dimatikan."},
-            {teks:"Algoritma adalah langkah menyelesaikan masalah", jawaban:true, penjelasan:"✅ BENAR: Itulah definisi dasar algoritma."}
+            {teks:"CPU adalah otak komputer", jawaban:"BENAR", penjelasan:"✅ BENAR: CPU memproses semua perintah dan data."},
+            {teks:"Data di RAM tetap ada setelah dimatikan", jawaban:"SALAH", penjelasan:"❌ SALAH: Data di RAM hilang saat dimatikan."},
+            {teks:"Algoritma adalah langkah menyelesaikan masalah", jawaban:"BENAR", penjelasan:"✅ BENAR: Itulah definisi dasar algoritma."}
         ];
     }
 }

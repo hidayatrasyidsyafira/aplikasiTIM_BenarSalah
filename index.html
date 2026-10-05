@@ -335,64 +335,36 @@ async function ambilDataTerbaru() {
           return String(r.c[0].v) === String(kodeRuang);
         });
         
-        if (!baris || !baris.c || !baris.c[1] || !baris.c[1].v) return;
+        // === BAGIAN DIPERBAIKI ===
+        if (!baris) {
+            console.log("Kode ruang belum ditemukan di Sheet");
+            return; // Jangan hapus data yang sudah ada
+        }
+        if (!baris.c || !baris.c[1] || !baris.c[1].v) {
+            console.log("Data tim belum tersimpan");
+            return; // Jangan timpa daftarTim jadi kosong
+        }
         
         let timBaru = JSON.parse(baris.c[1].v);
+        
+        if (timBaru.length === 0 && daftarTim.length > 0) {
+            // Data di Sheet masih kosong tapi kita sudah punya tim → kirim ulang
+            await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
+            return;
+        }
+        // === AKHIR BAGIAN DIPERBAIKI ===
+        
         const status = baris.c[3]?.v || "SIAP";
-        
-        // === GURU: Gabungkan data, JANGAN timpa kalau baru buat ===
-        if (peran === 'guru') {
-            // Kalau data lokal lebih banyak, simpan dulu lalu baca
-            if (daftarTim.length > timBaru.length) {
-                await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
-                return; // Tunggu putaran berikutnya
-            }
-            // Gabungkan poin
-            for (let t = 0; t < timBaru.length; t++) {
-                if (!daftarTim[t]) continue;
-                for (let a = 0; a < timBaru[t].anggota.length; a++) {
-                    const nama = timBaru[t].anggota[a].nama;
-                    const saya = daftarTim[t].anggota.find(x => x.nama === nama);
-                    if (saya) {
-                        timBaru[t].anggota[a].poin = Math.max(
-                            timBaru[t].anggota[a].poin || 0,
-                            saya.poin || 0
-                        );
-                    }
-                }
-            }
-        }
-        
-        // === SISWA: Lindungi poin lokal ===
-        if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
-            if (timBaru[timSaya] && timBaru[timSaya].anggota[indeksAnggotaSaya]) {
-                const poinDariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
-                if (poinDariSheet > poinTersimpanDiSheet) {
-                    poinSaya = poinDariSheet;
-                    poinTersimpanDiSheet = poinDariSheet;
-                }
-                timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
-            }
-        }
         
         if (JSON.stringify(timBaru) !== JSON.stringify(daftarTim)) {
             daftarTim = timBaru;
             if (peran === 'guru') {
                 tampilDaftarTimGuru();
-            } else if (peran === 'siswa' && sudahGabung) {
-                tampilPilihanTim();
-                if (timSaya === null || indeksAnggotaSaya === null) {
-                    const posisiSaya = daftarTim.findIndex(t => t.anggota.some(a => a.nama === namaSiswa));
-                    if (posisiSaya !== -1) {
-                        timSaya = posisiSaya;
-                        indeksAnggotaSaya = daftarTim[timSaya].anggota.findIndex(a => a.nama === namaSiswa);
-                        poinSaya = daftarTim[timSaya].anggota[indeksAnggotaSaya].poin || 0;
-                        poinTersimpanDiSheet = poinSaya;
-                        document.getElementById("poin-saya").textContent = poinSaya;
-                        if (sudahMulai) {
-                            document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
-                        }
-                    }
+            } else if (peran === 'siswa') {
+                if (daftarTim.length > 0) {
+                    document.getElementById("pesan-salah").style.display = "none";
+                    tampilLayar("pilih-tim");
+                    tampilPilihanTim();
                 }
             }
         }
@@ -404,15 +376,10 @@ async function ambilDataTerbaru() {
             }
         }
         
-        if (status === "SELESAI") {
-            if (sinkron) clearInterval(sinkron);
-        }
-        
     } catch (e) {
         console.log("Ambil data:", e.message);
     }
 }
-
 // === SISWA ===
 async function cobaMasuk() {
     namaSiswa = document.getElementById("nama-saya").value.trim();

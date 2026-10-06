@@ -533,70 +533,52 @@
     }
 
     async function ambilDataTerbaru() {
-    try {
-        // Baca dari Sheet lewat API
-        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
+      try {
+        const res = await fetch(
+          `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`
+        );
         if (!res.ok) return;
+
         let teks = await res.text();
         const mulai = teks.indexOf('{');
         if (mulai === -1) return;
         teks = teks.slice(mulai);
-        teks = teks.replace(/google\.visualization\.Query\.setResponse\(/, '').replace(/\);\s*$/, '');
+        teks = teks.replace(/google\.visualization\.Query\.setResponse\(/, '')
+                   .replace(/\);\s*$/, '');
+
         const data = JSON.parse(teks);
-        
-        if (!data.table || !data.table.rows) return;
-        
-        // Cari baris sesuai kode ruang
-        const baris = data.table.rows.find(r => {
-          if (!r.c || !r.c[0]) return false;
-          return String(r.c[0].v) === String(kodeRuang);
-        });
-        
-        if (!baris || !baris.c || !baris.c[1] || !baris.c[1].v) return;
-        
-        // Ambil data: c[0]=kode, c[1]=data_tim, c[3]=status
+        if (!data.table?.rows) return;
+
+        const baris = data.table.rows.find(r =>
+          r?.c?.[0] && String(r.c[0].v) === String(kodeRuang)
+        );
+        if (!baris?.c?.[1]?.v) return;
+
         let timBaru = JSON.parse(baris.c[1].v);
         const status = baris.c[3]?.v || "SIAP";
-        
-        // === GURU: Perbarui tampilan otomatis ===
+
+        // === GURU: Jangan timpa data yang baru dibuat ===
         if (peran === 'guru') {
-            // Jangan timpa kalau sedang kirim data
-            if (sedangKirim) return;
-            
-            // Gabungkan poin lalu tampilkan
-            daftarTim = timBaru;
-            tampilDaftarTimGuru(); // ← Ini yang akan menampilkan nama siswa
-        }
-        
-        // === SISWA: Sinkronisasi poin ===
-        if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
-            if (timBaru[timSaya] && timBaru[timSaya].anggota[indeksAnggotaSaya]) {
-                const poinDariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
-                if (poinDariSheet > poinTersimpanDiSheet) {
-                    poinSaya = poinDariSheet;
-                    poinTersimpanDiSheet = poinDariSheet;
-                }
-                timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
+          if (daftarTim.length > timBaru.length) {
+            await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
+            return; // Tunggu putaran berikutnya
+          }
+          // Gabungkan poin
+          for (let t = 0; t < timBaru.length; t++) {
+            if (!daftarTim[t]) continue;
+            for (let a = 0; a < timBaru[t].anggota.length; a++) {
+              const nama = timBaru[t].anggota[a].nama;
+              const saya = daftarTim[t].anggota.find(x => x.nama === nama);
+              if (saya) {
+                timBaru[t].anggota[a].poin = Math.max(
+                  timBaru[t].anggota[a].poin || 0,
+                  saya.poin || 0
+                );
+              }
             }
-            daftarTim = timBaru;
+          }
         }
-        
-        // Cek status mulai
-        if (status === "MULAI" && !sudahMulai) {
-            sudahMulai = true;
-            if (peran === 'siswa' && sudahGabung) {
-                masukLayarBermain();
-            }
-        }
-        
-        if (status === "SELESAI") {
-            if (sinkron) clearInterval(sinkron);
-        }
-        
-    } catch (e) {
-        console.log("Ambil data:", e.message);
-    }
-}
+
         // === SISWA: Lindungi poin lokal ===
         if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
           if (timBaru[timSaya]?.anggota[indeksAnggotaSaya]) {
@@ -691,45 +673,36 @@
     }
 
     async function pilihGabung(idx) {
-      // Sudah bergabung → langsung tampil
+      // Sudah bergabung? Langsung masuk
       if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
-          timSaya = idx;
-          indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
-          sudahGabung = true;
-          poinSaya = daftarTim[idx].anggota[indeksAnggotaSaya].poin || 0;
-          poinTersimpanDiSheet = poinSaya;
-          tampilLayarTunggu();
-          return;
+        timSaya = idx;
+        indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
+        sudahGabung = true;
+        poinSaya = daftarTim[idx].anggota[indeksAnggotaSaya].poin || 0;
+        poinTersimpanDiSheet = poinSaya;
+        tampilLayarTunggu();
+        return;
       }
-      
-      // Cek nama sudah dipakai di tim lain
+
+      // Cek nama dipakai di tim lain
       const sudahAda = daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa));
-      if (sudahAda) {
-          alert("⚠️ Nama sudah dipakai di tim lain!");
-          return;
-      }
-      
-      // Tambahkan ke data LOKAL dulu — langsung terlihat di layar siswa
-      daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
+      if (sudahAda) return alert("⚠️ Nama sudah dipakai di tim lain!");
+
+      // Tambahkan ke tim
+      daftarTim[idx].anggota.push({ nama: namaSiswa, poin: 0 });
       poinSaya = 0;
       poinTersimpanDiSheet = 0;
-      
-      // Kirim ke Sheet
+
       sedangKirim = true;
-      await kirimKeSheet({
-          aksi: "gabungTim",
-          kode: kodeRuang,
-          idxTim: idx,
-          nama: namaSiswa,
-          tim: daftarTim // ⭐ Kirim SELURUH data tim yang sudah diperbarui
-      });
+      await kirimKeSheet({ aksi: "gabungTim", kode: kodeRuang, idxTim: idx, nama: namaSiswa });
       sedangKirim = false;
-      
+
       timSaya = idx;
       indeksAnggotaSaya = daftarTim[idx].anggota.length - 1;
       sudahGabung = true;
       tampilLayarTunggu();
-  }
+    }
+
     function tampilLayarTunggu() {
       tampilLayar("tunggu");
       document.getElementById("info-saya").innerHTML = `

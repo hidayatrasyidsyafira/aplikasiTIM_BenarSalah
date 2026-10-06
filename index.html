@@ -583,12 +583,13 @@ async function waktuHabis() {
     }
 
     if (peran === 'guru') {
-        daftarTim.forEach(tim => {
-            const jawabanTim = tim.jawaban;
-            if (jawabanTim === jawabanBenar) {
-                tim.anggota.forEach(a => { a.poin = (a.poin || 0) + 1; });
-            }
-        });
+        // daftarTim.forEach(tim => {
+        //     const jawabanTim = tim.jawaban;
+        //     if (jawabanTim === jawabanBenar) {
+        //         tim.anggota.forEach(a => { a.poin = (a.poin || 0) + 1; });
+        //     }
+        // });
+        tampilDaftarTimGuru();
     }
 
     sedangKirim = true;

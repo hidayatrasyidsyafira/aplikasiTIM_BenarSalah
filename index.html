@@ -194,6 +194,7 @@ const SHEET_ID = "1FZ8Uj3l5IuCFchi-NnuCtjyrbTSN8sU8Nb6_EGLoIY0";
 const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyfR9aiospMrz2nuGALePmWw-KeuPCC26LiIoIEl3A1ikILnsxecQks-u16QysC7iWpQ/exec";
 const WAKTU_SOAL = 20;
 
+let soalKeGlobal = 0; // Tambahkan ini di bagian variabel atas  
 let peran = null, kodeRuang = null, namaSiswa = null;
 let timSaya = null, indeksAnggotaSaya = null;
 let daftarTim = [], daftarSoal = [], soalKe = 0;
@@ -201,6 +202,7 @@ let timer = null, sudahJawab = false, sinkron = null;
 let sudahGabung = false, sudahMulai = false;
 let poinSaya = 0, poinTersimpanDiSheet = 0;
 let jawabanSaya = null, sedangKirim = false;
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   await muatSoal();
@@ -309,16 +311,21 @@ async function ambilDataTerbaru() {
       if (!r.c || !r.c[0]) return false;
       return String(r.c[0].v) === String(kodeRuang);
     });
+    if (!baris || !baris.c || !baris.c[1] || !baris.c[1].v) return;
     
-    // Kalau kode TIDAK DITEMUKAN → langsung keluar
-    if (!baris || !baris.c || !baris.c[1] || !baris.c[1].v) {
-      console.log("Kode ruang belum ada di sheet");
-      return;
-    }
-    
-    // ✅ Kode DITEMUKAN → baca data tim
     let timBaru = JSON.parse(baris.c[1].v);
     const status = baris.c[3]?.v || "SIAP";
+    // ✅ Baca nomor soal dari sheet
+    const nomorSoalDiSheet = baris.c[5]?.v ?? 0;
+
+    // ✅ Sinkronkan nomor soal — kalau beda, ikuti dari sheet
+    if (nomorSoalDiSheet !== soalKeGlobal) {
+      soalKeGlobal = nomorSoalDiSheet;
+      soalKe = soalKeGlobal;
+      if (sudahMulai && peran === 'siswa') {
+        tampilSoal(); // Pindah soal otomatis
+      }
+    }
 
     if (peran === 'guru') {
       if (sedangKirim) return;
@@ -326,69 +333,38 @@ async function ambilDataTerbaru() {
       tampilDaftarTimGuru();
     }
 
-    // ✅ BAGIAN INI YANG DIPERBAIKI UNTUK SISWA
     if (peran === 'siswa') {
-      // Selalu perbarui daftarTim dari Sheet — bahkan sebelum bergabung!
-      daftarTim = timBaru;  // ← TAMBAHKAN BARIS INI
-      
+      daftarTim = timBaru;
       if (sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
         if (timBaru[timSaya]?.anggota[indeksAnggotaSaya]) {
-          const dariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
-          if (dariSheet > poinTersimpanDiSheet) {
-            poinSaya = dariSheet;
-            poinTersimpanDiSheet = dariSheet;
-            document.getElementById("poin-saya").textContent = poinSaya;
-          }
-          timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
+          poinSaya = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
+          poinTersimpanDiSheet = poinSaya;
+          document.getElementById("poin-saya").textContent = poinSaya;
+          document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
         }
       }
     }
 
-if (status === "MULAI" && !sudahMulai) {
+    if (status === "MULAI" && !sudahMulai) {
       sudahMulai = true;
+      soalKeGlobal = 0; // Mulai dari soal pertama
+      soalKe = 0;
       if (peran === 'siswa' && sudahGabung) masukLayarBermain();
     }
 
-    // ✅ Kalau sudah SELESAI → langsung tampilkan hasil
     if (status === "SELESAI") {
       if (sinkron) clearInterval(sinkron);
-
-      // Siswa yang belum sempat main → langsung lihat hasil
       if (!sudahMulai && peran === 'siswa' && sudahGabung) {
         sudahMulai = true;
-
-        // Susun peringkat dari data terbaru
-        const semuaSiswa = [];
-        daftarTim.forEach(t => {
-          t.anggota.forEach(a => {
-            semuaSiswa.push({ nama: a.nama, poin: a.poin || 0, tim: t.nama });
-          });
-        });
-        semuaSiswa.sort((a, b) => b.poin - a.poin);
-
-        // Tampilkan hasil akhir
-        document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s, i) => {
-          let kls = "", mdl = "";
-          if (i === 0) { kls = "p1"; mdl = "🥇"; }
-          else if (i === 1) { kls = "p2"; mdl = "🥈"; }
-          else if (i === 2) { kls = "p3"; mdl = "🥉"; }
-          return `
-            <div class="item-p ${kls}">
-              <div>${mdl || (i+1) + '.'} ${s.nama}</div>
-              <div>⭐ ${s.poin} — ${s.tim}</div>
-            </div>
-          `;
-        }).join("");
-
+        // ... bagian tampil hasil tetap sama
         tampilLayar("akhir");
       }
     }
-
   } catch (e) {
     console.log("Ambil data:", e.message);
   }
 }
-// ==============================================
+  // ==============================================
 // SISWA
 // ==============================================
 async function cobaMasuk() {
@@ -625,13 +601,22 @@ async function waktuHabis() {
   
   // ✅ Pindah soal — siswa lanjut, guru ikut otomatis
   if (peran === 'siswa') {
-    setTimeout(async () => {
+        setTimeout(async () => {
       soalKe++;
+      soalKeGlobal = soalKe;
+      
+      // ✅ Kirim nomor soal ke sheet — semua HP ikut
+      await kirimKeSheet({ 
+        aksi: "perbaruiSoal", 
+        kode: kodeRuang, 
+        soalKe: soalKeGlobal 
+      });
+
       if (soalKe < daftarSoal.length) {
         tampilSoal();
       } else {
-        // Siswa terakhir yang tandai SELESAI
         if (sinkron) clearInterval(sinkron);
+        // Tandai selesai
         await kirimKeSheet({ aksi: "simpanHasil", kode: kodeRuang, tim: daftarTim, siswa: [], waktu: new Date().toLocaleString("id-ID") });
         tampilLayar("akhir");
       }

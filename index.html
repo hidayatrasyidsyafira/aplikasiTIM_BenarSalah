@@ -344,11 +344,45 @@ async function ambilDataTerbaru() {
       }
     }
 
-    if (status === "MULAI" && !sudahMulai) {
+if (status === "MULAI" && !sudahMulai) {
       sudahMulai = true;
       if (peran === 'siswa' && sudahGabung) masukLayarBermain();
     }
-    if (status === "SELESAI" && sinkron) clearInterval(sinkron);
+
+    // ✅ Kalau sudah SELESAI → langsung tampilkan hasil
+    if (status === "SELESAI") {
+      if (sinkron) clearInterval(sinkron);
+
+      // Siswa yang belum sempat main → langsung lihat hasil
+      if (!sudahMulai && peran === 'siswa' && sudahGabung) {
+        sudahMulai = true;
+
+        // Susun peringkat dari data terbaru
+        const semuaSiswa = [];
+        daftarTim.forEach(t => {
+          t.anggota.forEach(a => {
+            semuaSiswa.push({ nama: a.nama, poin: a.poin || 0, tim: t.nama });
+          });
+        });
+        semuaSiswa.sort((a, b) => b.poin - a.poin);
+
+        // Tampilkan hasil akhir
+        document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s, i) => {
+          let kls = "", mdl = "";
+          if (i === 0) { kls = "p1"; mdl = "🥇"; }
+          else if (i === 1) { kls = "p2"; mdl = "🥈"; }
+          else if (i === 2) { kls = "p3"; mdl = "🥉"; }
+          return `
+            <div class="item-p ${kls}">
+              <div>${mdl || (i+1) + '.'} ${s.nama}</div>
+              <div>⭐ ${s.poin} — ${s.tim}</div>
+            </div>
+          `;
+        }).join("");
+
+        tampilLayar("akhir");
+      }
+    }
 
   } catch (e) {
     console.log("Ambil data:", e.message);

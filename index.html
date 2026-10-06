@@ -449,6 +449,7 @@ function tampilPilihanTim() {
 }
 
 async function pilihGabung(idx) {
+    // Sudah bergabung → langsung tampil
     if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
         timSaya = idx;
         indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
@@ -459,22 +460,26 @@ async function pilihGabung(idx) {
         return;
     }
     
+    // Cek nama sudah dipakai di tim lain
     const sudahAda = daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa));
     if (sudahAda) {
         alert("⚠️ Nama sudah dipakai di tim lain!");
         return;
     }
     
+    // Tambahkan ke data LOKAL dulu — langsung terlihat di layar siswa
     daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
     poinSaya = 0;
     poinTersimpanDiSheet = 0;
     
+    // Kirim ke Sheet
     sedangKirim = true;
     await kirimKeSheet({
         aksi: "gabungTim",
         kode: kodeRuang,
         idxTim: idx,
-        nama: namaSiswa
+        nama: namaSiswa,
+        tim: daftarTim // ⭐ Kirim SELURUH data tim yang sudah diperbarui
     });
     sedangKirim = false;
     

@@ -342,23 +342,25 @@ async function ambilDataTerbaru() {
         
         // === GURU: Gabungkan data, JANGAN timpa kalau baru buat ===
         if (peran === 'guru') {
-            // Kalau data lokal lebih banyak, simpan dulu lalu baca
+            // Kalau guru baru nambah tim, simpan dulu lalu baca
             if (daftarTim.length > timBaru.length) {
                 await kirimKeSheet({aksi:"perbaruiTim", kode:kodeRuang, tim:daftarTim});
-                return; // Tunggu putaran berikutnya
+                return;
             }
-            // Gabungkan poin
+            
+            // ⭐ AMBIL POIN DARI SHEET (data siswa) sebagai yang utama
             for (let t = 0; t < timBaru.length; t++) {
                 if (!daftarTim[t]) continue;
                 for (let a = 0; a < timBaru[t].anggota.length; a++) {
                     const nama = timBaru[t].anggota[a].nama;
-                    const saya = daftarTim[t].anggota.find(x => x.nama === nama);
-                    if (saya) {
-                        timBaru[t].anggota[a].poin = Math.max(
-                            timBaru[t].anggota[a].poin || 0,
-                            saya.poin || 0
-                        );
-                    }
+                    const poinDariSheet = timBaru[t].anggota[a].poin || 0; // dari hp siswa
+                    const poinLokalGuru = daftarTim[t].anggota.find(x => x.nama === nama)?.poin || 0; // dari layar guru
+                    
+                    // Ambil yang LEBIH BESAR = poin dari siswa yang diprioritaskan
+                    timBaru[t].anggota[a].poin = Math.max(poinDariSheet, poinLokalGuru);
+                    
+                    // Perbarui juga data lokal guru agar sinkron
+                    daftarTim[t].anggota.find(x => x.nama === nama).poin = timBaru[t].anggota[a].poin;
                 }
             }
         }

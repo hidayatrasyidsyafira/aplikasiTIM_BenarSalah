@@ -291,7 +291,7 @@ function salinSemua() {
 function mulaiPantauUpdate() {
   sinkron = setInterval(async () => {
     if (!sedangKirim) await ambilDataTerbaru();
-  }, 2000);
+  }, 1000);
 }
 
 async function ambilDataTerbaru() {

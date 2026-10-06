@@ -5,19 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kuis Benar/Salah — Tim Tetap</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
     body {
       background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
       min-height: 100vh;
       padding: 15px;
     }
-
     .container {
       background: white;
       border-radius: 20px;
@@ -27,288 +20,83 @@
       width: 100%;
       margin: 0 auto;
     }
-
-    h1 {
-      color: #2c3e50;
-      margin-bottom: 20px;
-      font-size: 1.5rem;
-      text-align: center;
-    }
-
-    h2 {
-      font-size: 1.1rem;
-      color: #34495e;
-      margin: 15px 0 8px;
-    }
-
-    p {
-      color: #555;
-      line-height: 1.5;
-      margin-bottom: 12px;
-    }
-
+    h1 { color: #2c3e50; margin-bottom: 20px; font-size: 1.5rem; text-align: center; }
+    h2 { font-size: 1.1rem; color: #34495e; margin: 15px 0 8px; }
+    p { color: #555; line-height: 1.5; margin-bottom: 12px; }
     input {
-      width: 100%;
-      padding: 14px 16px;
-      font-size: 1rem;
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      outline: none;
-      margin-bottom: 12px;
+      width: 100%; padding: 14px 16px; font-size: 1rem;
+      border: 2px solid #ddd; border-radius: 10px; outline: none; margin-bottom: 12px;
     }
-
-    input:focus {
-      border-color: #4facfe;
-    }
-
+    input:focus { border-color: #4facfe; }
     .btn {
-      padding: 14px;
-      font-size: 1rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
+      padding: 14px; font-size: 1rem; font-weight: bold;
+      border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s;
     }
-
-    .btn-biru {
-      background: #3498db;
-      color: white;
-    }
-
-    .btn-hijau {
-      background: #2ecc71;
-      color: white;
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .baris-tambah {
-      display: flex;
-      gap: 8px;
-      margin: 15px 0;
-    }
-
-    .baris-tambah input {
-      flex: 1;
-      margin: 0;
-    }
-
+    .btn-biru { background: #3498db; color: white; }
+    .btn-hijau { background: #2ecc71; color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .baris-tambah { display: flex; gap:8px; margin:15px 0; }
+    .baris-tambah input { flex:1; margin:0; }
     .kode-ruang-kotak {
-      background: #eaf4fe;
-      padding: 20px;
-      border-radius: 14px;
-      text-align: center;
-      margin: 15px 0;
+      background: #eaf4fe; padding: 20px; border-radius: 14px; text-align: center;
+      margin: 15px 0; display: none;
     }
-
-    .kode-ruang {
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: #2980b9;
-      letter-spacing: 6px;
-      margin: 10px 0;
-    }
-
+    .kode-ruang { font-size: 2.5rem; font-weight: bold; color: #2980b9; letter-spacing: 6px; margin: 10px 0; }
     .link-siswa-kotak {
-      background: #fff3cd;
-      padding: 15px;
-      border-radius: 10px;
-      margin: 15px 0;
-      word-break: break-all;
-      font-size: 0.9rem;
-      color: #856404;
+      background: #fff3cd; padding: 15px; border-radius: 10px; margin: 15px 0;
+      word-break: break-all; font-size: 0.9rem; color: #856404;
     }
-
-    .layar {
-      display: none;
-    }
-
-    .layar.aktif {
-      display: block;
-    }
-
+    .layar { display: none; }
+    .layar.aktif { display: block; }
     .kartu-tim {
-      padding: 16px;
-      border: 2px solid #ddd;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
+      padding: 16px; border: 2px solid #ddd; border-radius: 12px;
+      margin-bottom: 12px; cursor: pointer; transition: all 0.2s;
     }
-
-    .kartu-tim:hover {
-      border-color: #2ecc71;
-      background: #f0fff4;
-    }
-
-    .kartu-tim.terpilih {
-      border-color: #2ecc71;
-      background: #d4edda;
-    }
-
-    .nama-tim {
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-
-    .daftar-anggota {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .baju-nama {
-      background: #eaf4fe;
-      padding: 5px 12px;
-      border-radius: 15px;
-      font-size: 0.9rem;
-    }
-
-    .baju-nama.saya {
-      background: #2ecc71;
-      color: white;
-      font-weight: bold;
-    }
-
+    .kartu-tim:hover { border-color: #2ecc71; background: #f0fff4; }
+    .kartu-tim.terpilih { border-color: #2ecc71; background: #d4edda; }
+    .nama-tim { font-weight: bold; font-size: 1.1rem; }
+    .daftar-anggota { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .baju-nama { background: #eaf4fe; padding: 5px 12px; border-radius: 15px; font-size: 0.9rem; }
+    .baju-nama.saya { background: #2ecc71; color: white; font-weight: bold; }
     .soal-box {
-      background: #f8f9fa;
-      padding: 25px;
-      border-radius: 16px;
-      margin-bottom: 20px;
-      border-left: 5px solid #4facfe;
-      font-size: 1.2rem;
-      line-height: 1.6;
-      color: #2c3e50;
-      text-align: center;
+      background: #f8f9fa; padding: 25px; border-radius: 16px;
+      margin-bottom: 20px; border-left: 5px solid #4facfe;
+      font-size: 1.2rem; line-height: 1.6; color: #2c3e50; text-align: center;
     }
-
-    .info-atas {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 0.9rem;
-      color: #666;
-    }
-
-    .timer {
-      font-weight: bold;
-      color: #e67e22;
-      font-size: 1.1rem;
-    }
-
-    .poin-saya {
-      font-weight: bold;
-      color: #2ecc71;
-    }
-
-    .tombol-jwb-besar {
-      display: flex;
-      gap: 15px;
-      margin-top: 30px;
-    }
-
+    .info-atas { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; color: #666; }
+    .timer { font-weight: bold; color: #e67e22; font-size: 1.1rem; }
+    .poin-saya { font-weight: bold; color: #2ecc71; }
+    .tombol-jwb-besar { display: flex; gap: 15px; margin-top: 30px; }
     .btn-jwb {
-      flex: 1;
-      padding: 40px 20px;
-      font-size: 1.5rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
+      flex: 1; padding: 40px 20px; font-size: 1.5rem; font-weight: bold;
+      border: none; border-radius: 16px; cursor: pointer;
       transition: all 0.2s;
     }
-
-    .btn-jwb:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    .btn-benar {
-      background: #2ecc71;
-      color: white;
-    }
-
-    .btn-salah {
-      background: #e74c3c;
-      color: white;
-    }
-
-    .btn-jwb.dipilih {
-      box-shadow: inset 0 0 0 4px gold;
-    }
-
-    .peringkat {
-      margin-top: 20px;
-    }
-
+    .btn-jwb:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-benar { background: #2ecc71; color: white; }
+    .btn-salah { background: #e74c3c; color: white; }
+    .btn-jwb.dipilih { box-shadow: inset 0 0 0 4px gold; }
+    .peringkat { margin-top: 20px; }
     .item-p {
-      padding: 14px 16px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      padding: 14px 16px; border-radius: 10px; margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
     }
-
-    .p1 {
-      background: #fff3cd;
-      border-left: 4px solid #f1c40f;
-    }
-
-    .p2 {
-      background: #e9e9e9;
-      border-left: 4px solid #95a5a6;
-    }
-
-    .p3 {
-      background: #f5e6d3;
-      border-left: 4px solid #cd7f32;
-    }
-
-    .muat {
-      text-align: center;
-      color: #666;
-      padding: 20px;
-    }
-
-    .pesan {
-      padding: 12px;
-      border-radius: 10px;
-      margin: 10px 0;
-      display: none;
-    }
-
-    .pesan.gagal {
-      background: #f8d7da;
-      color: #721c24;
-    }
-
-    .hanya-guru {
-      display: none;
-    }
-
-    .pesan-sukses {
-      color: #2ecc71;
-      font-size: 0.9rem;
-      margin: 8px 0;
-      display: none;
-    }
+    .p1 { background: #fff3cd; border-left: 4px solid #f1c40f; }
+    .p2 { background: #e9e9e9; border-left: 4px solid #95a5a6; }
+    .p3 { background: #f5e6d3; border-left: 4px solid #cd7f32; }
+    .muat { text-align: center; color: #666; padding: 20px; }
+    .pesan { padding: 12px; border-radius: 10px; margin: 10px 0; display: none; }
+    .pesan.gagal { background: #f8d7da; color: #721c24; }
+    .hanya-guru { display: none; }
+    .pesan-sukses { color: #2ecc71; font-size: 0.9rem; margin: 8px 0; display: none; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🧠 Kuis Benar/Salah</h1>
+    <div id="layar-cek" class="layar aktif"><p class="muat">Memuat...</p></div>
 
-    <div id="layar-cek" class="layar aktif">
-      <p class="muat">Memuat...</p>
-    </div>
-
-    <!-- === LAYAR GURU: Buat Ruang & Tim === -->
+    <!-- === LAYAR GURU === -->
     <div id="layar-guru" class="layar">
       <h2>📡 Buat Ruang & Tim</h2>
       <div class="baris-tambah">
@@ -316,13 +104,11 @@
         <button class="btn btn-biru" onclick="tambahTim()">+ Tim</button>
       </div>
       <p id="pesan-sukses-tim" class="pesan-sukses">✅ Tim ditambahkan!</p>
-
       <h3 style="margin-top:20px;">Daftar Tim:</h3>
       <div id="daftar-tim-guru">
         <p style="color:#999; font-style:italic;">Belum ada tim, tambahkan di atas...</p>
       </div>
-
-      <div class="kode-ruang-kotak" id="kotak-kode" style="display:none;">
+      <div class="kode-ruang-kotak" id="kotak-kode">
         <p class="sub-kode">Kode Ruang:</p>
         <div class="kode-ruang" id="tampil-kode"></div>
         <div class="link-siswa-kotak">
@@ -331,14 +117,13 @@
         </div>
         <button class="btn btn-biru" style="margin-top:10px; width:100%;" onclick="salinSemua()">📋 Salin Kode & Link</button>
       </div>
-
       <div id="status-masuk" style="margin:20px 0;"></div>
       <button class="btn btn-hijau" id="btn-mulai" onclick="mulaiKuis()" disabled style="width:100%;">
         ▶️ MULAI PERMAINAN
       </button>
     </div>
 
-    <!-- === LAYAR SISWA: Masuk Ruang === -->
+    <!-- === LAYAR SISWA MASUK === -->
     <div id="layar-siswa-masuk" class="layar">
       <h2>🔑 Masuk ke Ruang</h2>
       <p style="color:#2980b9; font-weight:bold;">Kode Ruang: <span id="kode-dari-link"></span></p>
@@ -351,7 +136,7 @@
       </p>
     </div>
 
-    <!-- === LAYAR SISWA: Pilih Tim === -->
+    <!-- === LAYAR PILIH TIM === -->
     <div id="layar-pilih-tim" class="layar">
       <h2>👥 Pilih Tim Anda</h2>
       <p style="color:#666; font-size:0.9rem;">Klik nama tim untuk bergabung</p>
@@ -391,7 +176,7 @@
     <!-- === LAYAR HASIL AKHIR === -->
     <div id="layar-akhir" class="layar">
       <h2 style="text-align:center;">🎉 Hasil Akhir</h2>
-      <div id="status-simpan" style="text-align:center; padding:10px; border-radius:10px; margin-bottom:15px; background:#d4edda; color:#155724; font-weight:bold;">
+      <div id="status-simpan" style="text-align:center; padding:10px; border-radius:10px; margin-bottom:15px; background:#d4edda; color:#155724; font-weight:bold; display:none;">
         ✅ Tersimpan!
       </div>
       <div class="peringkat" id="daftar-hasil"></div>
@@ -401,512 +186,446 @@
     </div>
   </div>
 
-  <script>
-    // ==============================================
-    // KONFIGURASI
-    // ==============================================
-    const SHEET_ID = "1FZ8Uj3l5IuCFchi-NnuCtjyrbTSN8sU8Nb6_EGLoIY0";
-    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpOjmujQlkM2KaRKPzja10QKQUqDmEenHLZs0JHOT-iYwFVfsGLiR2BBr5F05oyI4zQA/exec";
-    const WAKTU_SOAL = 20; // detik per soal
+<script>
+// ==============================================
+// KONFIGURASI — PASTIKAN URL BENAR
+// ==============================================
+const SHEET_ID = "1FZ8Uj3l5IuCFchi-NnuCtjyrbTSN8sU8Nb6_EGLoIY0";
+const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpOjmujQlkM2KaRKPzja10QKQUqDmEenHLZs0JHOT-iYwFVfsGLiR2BBr5F05oyI4zQA/exec";
+const WAKTU_SOAL = 20;
 
-    // ==============================================
-    // DATA GLOBAL
-    // ==============================================
-    let peran = null;
-    let kodeRuang = null;
-    let namaSiswa = null;
-    let timSaya = null;
-    let indeksAnggotaSaya = null;
-    let daftarTim = [];
-    let daftarSoal = [];
-    let soalKe = 0;
-    let timer = null;
-    let sudahJawab = false;
-    let sinkron = null;
-    let sudahGabung = false;
-    let sudahMulai = false;
-    let poinSaya = 0;
-    let poinTersimpanDiSheet = 0;
-    let jawabanSaya = null;
-    let sedangKirim = false; // Cegah bentrok kirim & baca
+let peran = null, kodeRuang = null, namaSiswa = null;
+let timSaya = null, indeksAnggotaSaya = null;
+let daftarTim = [], daftarSoal = [], soalKe = 0;
+let timer = null, sudahJawab = false, sinkron = null;
+let sudahGabung = false, sudahMulai = false;
+let poinSaya = 0, poinTersimpanDiSheet = 0;
+let jawabanSaya = null, sedangKirim = false;
 
-    // ==============================================
-    // INISIALISASI
-    // ==============================================
-    document.addEventListener("DOMContentLoaded", async () => {
-      await muatSoal();
-      const params = new URLSearchParams(window.location.search);
-      const kodeLink = params.get('siswa');
-
-      if (kodeLink) {
-        peran = 'siswa';
-        kodeRuang = kodeLink;
-        document.getElementById('kode-dari-link').textContent = kodeRuang;
-        tampilLayar("siswa-masuk");
-      } else {
-        peran = 'guru';
-        buatRuang();
-        tampilLayar("guru");
-      }
-
-      // Tampil/sembunyikan elemen khusus guru
-      document.querySelectorAll('.hanya-guru').forEach(el => {
-        el.style.display = (peran === 'guru') ? 'block' : 'none';
-      });
-    });
-
-    // ==============================================
-    // FUNGSI — GURU
-    // ==============================================
-    async function buatRuang() {
-      kodeRuang = Math.floor(100000 + Math.random() * 900000).toString();
-      daftarTim = [];
-      sudahMulai = false;
-
-      document.getElementById("kotak-kode").style.display = "block";
-      document.getElementById("tampil-kode").textContent = kodeRuang;
-
-      const link = window.location.href.split('?')[0] + '?siswa=' + kodeRuang;
-      document.getElementById("link-siswa").textContent = link;
-
-      sedangKirim = true;
-      await kirimKeSheet({ aksi: "buatRuang", kode: kodeRuang, tim: daftarTim, status: "SIAP" });
-      sedangKirim = false;
-
-      mulaiPantauUpdate();
-    }
-
-    async function tambahTim() {
-      const nama = document.getElementById("nama-tim-baru").value.trim();
-      if (!nama) return alert("Isi nama tim dulu!");
-      if (daftarTim.some(t => t.nama === nama)) return alert("Tim sudah ada!");
-
-      daftarTim.push({ nama, anggota: [], jawaban: null });
-      document.getElementById("nama-tim-baru").value = "";
-
-      tampilDaftarTimGuru();
-
-      sedangKirim = true;
-      await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
-      sedangKirim = false;
-
-      const pesan = document.getElementById("pesan-sukses-tim");
-      pesan.style.display = "block";
-      setTimeout(() => pesan.style.display = "none", 2000);
-    }
-
-    function tampilDaftarTimGuru() {
-      const wadah = document.getElementById("daftar-tim-guru");
-
-      if (daftarTim.length === 0) {
-        wadah.innerHTML = '<p style="color:#999; font-style:italic;">Belum ada tim, tambahkan di atas...</p>';
-      } else {
-        wadah.innerHTML = daftarTim.map((t, i) => `
-          <div class="kartu-tim">
-            <div class="nama-tim">${t.nama}</div>
-            <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
-            <div class="daftar-anggota">
-              ${t.anggota.length === 0
-                ? '<span style="color:#999;">Belum ada siswa</span>'
-                : t.anggota.map(a => `<span class="baju-nama">${a.nama} (${a.poin||0})</span>`).join("")}
-            </div>
-          </div>
-        `).join("");
-      }
-
-      const total = daftarTim.reduce((s, t) => s + t.anggota.length, 0);
-      document.getElementById("status-masuk").innerHTML =
-        `<p>✅ <strong>${total}</strong> siswa sudah bergabung</p>`;
-      document.getElementById("btn-mulai").disabled = total === 0;
-    }
-
-    function salinSemua() {
-      const teks = `Kode Ruang: ${kodeRuang}\nLink: ${document.getElementById("link-siswa").textContent}`;
-      navigator.clipboard.writeText(teks)
-        .then(() => alert("Kode & Link disalin! Kirim ke siswa ya"));
-    }
-
-    function mulaiPantauUpdate() {
-      sinkron = setInterval(async () => {
-        if (!sedangKirim) await ambilDataTerbaru();
-      }, 2000);
-    }
-
-    async function ambilDataTerbaru() {
-    try {
-        // Baca dari Sheet lewat API
-        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
-        if (!res.ok) return;
-        let teks = await res.text();
-        const mulai = teks.indexOf('{');
-        if (mulai === -1) return;
-        teks = teks.slice(mulai);
-        teks = teks.replace(/google\.visualization\.Query\.setResponse\(/, '').replace(/\);\s*$/, '');
-        const data = JSON.parse(teks);
-        
-        if (!data.table || !data.table.rows) return;
-        
-        // Cari baris sesuai kode ruang
-        const baris = data.table.rows.find(r => {
-          if (!r.c || !r.c[0]) return false;
-          return String(r.c[0].v) === String(kodeRuang);
-        });
-        
-        if (!baris || !baris.c || !baris.c[1] || !baris.c[1].v) return;
-        
-        // Ambil data: c[0]=kode, c[1]=data_tim, c[3]=status
-        let timBaru = JSON.parse(baris.c[1].v);
-        const status = baris.c[3]?.v || "SIAP";
-        
-        // === GURU: Perbarui tampilan otomatis ===
-        if (peran === 'guru') {
-            // Jangan timpa kalau sedang kirim data
-            if (sedangKirim) return;
-            
-            // Gabungkan poin lalu tampilkan
-            daftarTim = timBaru;
-            tampilDaftarTimGuru(); // ← Ini yang akan menampilkan nama siswa
-        }
-        
-        // === SISWA: Sinkronisasi poin ===
-        if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
-            if (timBaru[timSaya] && timBaru[timSaya].anggota[indeksAnggotaSaya]) {
-                const poinDariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
-                if (poinDariSheet > poinTersimpanDiSheet) {
-                    poinSaya = poinDariSheet;
-                    poinTersimpanDiSheet = poinDariSheet;
-                }
-                timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
-            }
-            daftarTim = timBaru;
-        }
-        
-        // Cek status mulai
-        if (status === "MULAI" && !sudahMulai) {
-            sudahMulai = true;
-            if (peran === 'siswa' && sudahGabung) {
-                masukLayarBermain();
-            }
-        }
-        
-        if (status === "SELESAI") {
-            if (sinkron) clearInterval(sinkron);
-        }
-        
-    } catch (e) {
-        console.log("Ambil data:", e.message);
-    }
-}
-    // ==============================================
-    // FUNGSI — SISWA
-    // ==============================================
-    async function cobaMasuk() {
-      namaSiswa = document.getElementById("nama-saya").value.trim();
-      if (!namaSiswa) return alert("Isi nama dulu!");
-
-      document.getElementById("pesan-salah").style.display = "none";
-      await ambilDataTerbaru();
-
-      if (daftarTim.length === 0) {
-        document.getElementById("pesan-salah").style.display = "block";
-        return;
-      }
-
-      tampilLayar("pilih-tim");
-      tampilPilihanTim();
-      mulaiPantauUpdate();
-    }
-
-    function tampilPilihanTim() {
-      const wadah = document.getElementById("daftar-tim-pilihan");
-      wadah.innerHTML = daftarTim.map((t, i) => {
-        const sudah = t.anggota.some(a => a.nama === namaSiswa);
-        return `
-          <div class="kartu-tim ${sudah ? 'terpilih' : ''}" onclick="pilihGabung(${i})">
-            <div class="nama-tim">${sudah ? '✅ ' : ''}${t.nama}</div>
-            <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
-            <div class="daftar-anggota">
-              ${t.anggota.map(a => `
-                <span class="baju-nama ${a.nama === namaSiswa ? 'saya' : ''}">
-                  ${a.nama} (${a.poin||0})
-                </span>
-              `).join("")}
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    async function pilihGabung(idx) {
-      // Sudah bergabung → langsung tampil
-      if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
-          timSaya = idx;
-          indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
-          sudahGabung = true;
-          poinSaya = daftarTim[idx].anggota[indeksAnggotaSaya].poin || 0;
-          poinTersimpanDiSheet = poinSaya;
-          tampilLayarTunggu();
-          return;
-      }
-      
-      // Cek nama sudah dipakai di tim lain
-      const sudahAda = daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa));
-      if (sudahAda) {
-          alert("⚠️ Nama sudah dipakai di tim lain!");
-          return;
-      }
-      
-      // Tambahkan ke data LOKAL dulu — langsung terlihat di layar siswa
-      daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
-      poinSaya = 0;
-      poinTersimpanDiSheet = 0;
-      
-      // Kirim ke Sheet
-      sedangKirim = true;
-      await kirimKeSheet({
-          aksi: "gabungTim",
-          kode: kodeRuang,
-          idxTim: idx,
-          nama: namaSiswa,
-          tim: daftarTim // ⭐ Kirim SELURUH data tim yang sudah diperbarui
-      });
-      sedangKirim = false;
-      
-      timSaya = idx;
-      indeksAnggotaSaya = daftarTim[idx].anggota.length - 1;
-      sudahGabung = true;
-      tampilLayarTunggu();
+document.addEventListener("DOMContentLoaded", async () => {
+  await muatSoal();
+  const params = new URLSearchParams(window.location.search);
+  const kodeLink = params.get('siswa');
+  
+  if (kodeLink) {
+    peran = 'siswa';
+    kodeRuang = kodeLink;
+    document.getElementById('kode-dari-link').textContent = kodeRuang;
+    tampilLayar("siswa-masuk");
+  } else {
+    peran = 'guru';
+    buatRuang();
+    tampilLayar("guru");
   }
-    function tampilLayarTunggu() {
-      tampilLayar("tunggu");
-      document.getElementById("info-saya").innerHTML = `
-        ✅ <strong>${namaSiswa}</strong><br>
-        Bergabung di <strong>${daftarTim[timSaya].nama}</strong>
-      `;
-      document.getElementById("poin-saya").textContent = poinSaya;
-    }
+  
+  document.querySelectorAll('.hanya-guru').forEach(el => {
+    el.style.display = (peran === 'guru') ? 'block' : 'none';
+  });
+});
 
-    function masukLayarBermain() {
-      soalKe = 0;
-      jawabanSaya = null;
-      tampilLayar("bermain");
+// ==============================================
+// GURU
+// ==============================================
+async function buatRuang() {
+  kodeRuang = Math.floor(100000 + Math.random() * 900000).toString();
+  daftarTim = []; sudahMulai = false;
+  
+  document.getElementById("kotak-kode").style.display = "block";
+  document.getElementById("tampil-kode").textContent = kodeRuang;
+  const link = window.location.href.split('?')[0] + '?siswa=' + kodeRuang;
+  document.getElementById("link-siswa").textContent = link;
+  
+  sedangKirim = true;
+  await kirimKeSheet({ aksi: "buatRuang", kode: kodeRuang, tim: daftarTim });
+  sedangKirim = false;
+  
+  mulaiPantauUpdate();
+}
 
-      if (peran === 'siswa') {
-        document.getElementById("tampil-poin-saya").style.display = "inline";
-        document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
-      }
+async function tambahTim() {
+  const nama = document.getElementById("nama-tim-baru").value.trim();
+  if (!nama) return alert("Isi nama tim dulu!");
+  if (daftarTim.some(t => t.nama === nama)) return alert("Tim sudah ada!");
+  
+  daftarTim.push({ nama, anggota: [], jawaban: null });
+  document.getElementById("nama-tim-baru").value = "";
+  tampilDaftarTimGuru();
+  
+  sedangKirim = true;
+  await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
+  sedangKirim = false;
+  
+  const pesan = document.getElementById("pesan-sukses-tim");
+  pesan.style.display = "block";
+  setTimeout(() => pesan.style.display = "none", 2000);
+}
 
-      tampilSoal();
-    }
-
-    // ==============================================
-    // FUNGSI — BERMAIN & PENILAIAN
-    // ==============================================
-    async function mulaiKuis() {
-      if (daftarSoal.length === 0) return alert("Belum ada soal!");
-
-      sudahMulai = true;
-      if (sinkron) clearInterval(sinkron);
-
-      sedangKirim = true;
-      await kirimKeSheet({ aksi: "mulaiKuis", kode: kodeRuang, tim: daftarTim, status: "MULAI" });
-      sedangKirim = false;
-
-      masukLayarBermain();
-    }
-
-    function tampilSoal() {
-      sudahJawab = false;
-      jawabanSaya = null;
-      daftarTim.forEach(t => t.jawaban = null);
-
-      document.getElementById("info-soal-ke").textContent = `Soal ${soalKe+1}/${daftarSoal.length}`;
-      if (peran === 'guru') {
-        document.getElementById("teks-soal-guru").textContent = daftarSoal[soalKe].teks;
-      }
-
-      document.getElementById("hasil-soal").style.display = "none";
-      document.getElementById("jwb-benar").disabled = false;
-      document.getElementById("jwb-salah").disabled = false;
-      document.getElementById("jwb-benar").classList.remove("dipilih");
-      document.getElementById("jwb-salah").classList.remove("dipilih");
-
-      let sisaWaktu = WAKTU_SOAL;
-      document.getElementById("tampil-timer").textContent = sisaWaktu + "s";
-      if (timer) clearInterval(timer);
-
-      timer = setInterval(() => {
-        sisaWaktu--;
-        document.getElementById("tampil-timer").textContent = sisaWaktu + "s";
-        if (sisaWaktu <= 0) {
-          clearInterval(timer);
-          waktuHabis();
-        }
-      }, 1000);
-    }
-
-    function pilihJawab(pilihan) {
-      if (sudahJawab) return;
-      sudahJawab = true;
-      jawabanSaya = pilihan;
-
-      document.getElementById("jwb-benar").disabled = true;
-      document.getElementById("jwb-salah").disabled = true;
-      document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === 'BENAR');
-      document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === 'SALAH');
-
-      if (timSaya !== null && daftarTim[timSaya]) {
-        daftarTim[timSaya].jawaban = pilihan;
-      }
-    }
-
-    async function waktuHabis() {
-      const soal = daftarSoal[soalKe];
-      const jawabanBenar = soal.jawaban;
-      let benarSaya = false;
-
-      // Hitung poin siswa
-      if (peran === 'siswa' && jawabanSaya) {
-        benarSaya = jawabanSaya === jawabanBenar;
-        if (benarSaya) poinSaya += 1;
-        if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
-          daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
-        }
-      }
-
-      // Hitung poin semua tim (guru)
-      if (peran === 'guru') {
-        daftarTim.forEach(tim => {
-          if (tim.jawaban === jawabanBenar) {
-            tim.anggota.forEach(a => { a.poin = (a.poin || 0) + 1; });
-          }
-        });
-      }
-
-      // Simpan ke Sheet
-      sedangKirim = true;
-      await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
-      sedangKirim = false;
-
-      // Tampilkan hasil
-      const kotak = document.getElementById("hasil-soal");
-      kotak.style.display = "block";
-      kotak.innerHTML = `
-        <div style="padding:15px; border-radius:10px; background:${benarSaya ? '#d4edda' : '#f8d7da'}; color:${benarSaya ? '#155724' : '#721c24'};">
-          ${benarSaya ? '✅ BENAR! +1 Poin' : '❌ SALAH!'}<br>
-          Jawaban benar: <strong>${jawabanBenar}</strong><br>
-          ${soal.penjelasan}
-          ${peran === 'siswa' ? `<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>` : ''}
+function tampilDaftarTimGuru() {
+  const wadah = document.getElementById("daftar-tim-guru");
+  if (daftarTim.length === 0) {
+    wadah.innerHTML = '<p style="color:#999; font-style:italic;">Belum ada tim, tambahkan di atas...</p>';
+  } else {
+    wadah.innerHTML = daftarTim.map((t) => `
+      <div class="kartu-tim">
+        <div class="nama-tim">${t.nama}</div>
+        <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
+        <div class="daftar-anggota">
+          ${t.anggota.length === 0
+            ? '<span style="color:#999;">Belum ada siswa</span>'
+            : t.anggota.map(a => `<span class="baju-nama">${a.nama} (${a.poin||0})</span>`).join("")}
         </div>
-      `;
+      </div>
+    `).join("");
+  }
+  const total = daftarTim.reduce((s, t) => s + t.anggota.length, 0);
+  document.getElementById("status-masuk").innerHTML =
+    `<p>✅ <strong>${total}</strong> siswa sudah bergabung</p>`;
+  document.getElementById("btn-mulai").disabled = total === 0;
+}
 
-      if (peran === 'siswa' && sudahMulai) {
-        document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
-      }
-      if (peran === 'guru') tampilDaftarTimGuru();
+function salinSemua() {
+  const teks = `Kode Ruang: ${kodeRuang}\nLink: ${document.getElementById("link-siswa").textContent}`;
+  navigator.clipboard.writeText(teks).then(() => alert("Kode & Link disalin! Kirim ke siswa ya"));
+}
 
-      // Lanjut soal berikutnya / selesai
-      setTimeout(async () => {
-        soalKe++;
-        if (soalKe < daftarSoal.length) {
-          tampilSoal();
-        } else {
-          await selesai();
+function mulaiPantauUpdate() {
+  sinkron = setInterval(async () => {
+    if (!sedangKirim) await ambilDataTerbaru();
+  }, 2000);
+}
+
+async function ambilDataTerbaru() {
+  try {
+    const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
+    if (!res.ok) return;
+    let teks = await res.text();
+    const mulai = teks.indexOf('{');
+    if (mulai === -1) return;
+    teks = teks.slice(mulai).replace(/google\.visualization\.Query\.setResponse\(/, '').replace(/\);\s*$/, '');
+    const data = JSON.parse(teks);
+    if (!data.table || !data.table.rows) return;
+    
+    const baris = data.table.rows.find(r => {
+      if (!r.c || !r.c[0]) return false;
+      return String(r.c[0].v) === String(kodeRuang);
+    });
+    if (!baris || !baris.c || !baris.c[1] || !baris.c[1].v) return;
+    
+    let timBaru = JSON.parse(baris.c[1].v);
+    const status = baris.c[3]?.v || "SIAP";
+
+    if (peran === 'guru') {
+      if (sedangKirim) return;
+      daftarTim = timBaru;
+      tampilDaftarTimGuru();
+    }
+
+    if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
+      if (timBaru[timSaya]?.anggota[indeksAnggotaSaya]) {
+        const dariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
+        if (dariSheet > poinTersimpanDiSheet) {
+          poinSaya = dariSheet;
+          poinTersimpanDiSheet = dariSheet;
+          document.getElementById("poin-saya").textContent = poinSaya;
         }
-      }, 3000);
-    }
-
-    async function selesai() {
-      if (timer) clearInterval(timer);
-      tampilLayar("akhir");
-
-      // Susun peringkat
-      const semuaSiswa = [];
-      daftarTim.forEach(t => {
-        t.anggota.forEach(a => {
-          semuaSiswa.push({ nama: a.nama, poin: a.poin || 0, tim: t.nama });
-        });
-      });
-      semuaSiswa.sort((a, b) => b.poin - a.poin);
-
-      document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s, i) => {
-        let kls = "", mdl = "";
-        if (i === 0) { kls = "p1"; mdl = "🥇"; }
-        else if (i === 1) { kls = "p2"; mdl = "🥈"; }
-        else if (i === 2) { kls = "p3"; mdl = "🥉"; }
-        return `
-          <div class="item-p ${kls}">
-            <div>${mdl || (i+1) + '.'} ${s.nama}</div>
-            <div>⭐ ${s.poin} — ${s.tim}</div>
-          </div>
-        `;
-      }).join("");
-
-      // Simpan hasil akhir
-      sedangKirim = true;
-      await kirimKeSheet({
-        aksi: "simpanHasil",
-        kode: kodeRuang,
-        tim: daftarTim,
-        siswa: semuaSiswa,
-        waktu: new Date().toLocaleString("id-ID"),
-        status: "SELESAI"
-      });
-      sedangKirim = false;
-    }
-
-    // ==============================================
-    // FUNGSI BANTUAN
-    // ==============================================
-    function tampilLayar(nama) {
-      document.querySelectorAll(".layar").forEach(l => l.classList.remove("aktif"));
-      document.getElementById(`layar-${nama}`).classList.add("aktif");
-    }
-
-    async function kirimKeSheet(data) {
-      try {
-        await fetch(APPSCRIPT_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-        });
-        return { status: "ok" };
-      } catch (e) {
-        console.log("Kirim:", e);
-        return null;
+        timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
       }
+      daftarTim = timBaru;
     }
 
-    async function muatSoal() {
-      try {
-        const res = await fetch("soal.csv", { cache: "no-store" });
-        if (!res.ok) throw 0;
-        const teks = await res.text();
-        const baris = teks.split("\n");
-        daftarSoal = [];
+    if (status === "MULAI" && !sudahMulai) {
+      sudahMulai = true;
+      if (peran === 'siswa' && sudahGabung) masukLayarBermain();
+    }
+    if (status === "SELESAI" && sinkron) clearInterval(sinkron);
 
-        // Format CSV: teks, jawaban (BENAR/SALAH), penjelasan
-        for (let i = 1; i < baris.length; i++) {
-          const b = baris[i].split(",").map(x => x.trim().replace(/^"|"$/g, ""));
-          if (b.length < 2 || !b[0]) continue;
+  } catch (e) {
+    console.log("Ambil data:", e.message);
+  }
+}
 
-          const jawabanMentah = String(b[1]).toUpperCase().trim();
-          daftarSoal.push({
-            teks: b[0],
-            jawaban: jawabanMentah === "BENAR" ? "BENAR" : "SALAH",
-            penjelasan: b[2] || (jawabanMentah === "BENAR" ? "✅ Benar!" : "❌ Salah!")
-          });
-        }
-      } catch {
-        // Soal bawaan jika soal.csv tidak ditemukan
-        daftarSoal = [
-          { teks: "CPU adalah otak komputer", jawaban: "BENAR", penjelasan: "✅ BENAR: CPU memproses semua perintah dan data." },
-          { teks: "Data di RAM tetap ada setelah dimatikan", jawaban: "SALAH", penjelasan: "❌ SALAH: Data di RAM hilang saat dimatikan." },
-          { teks: "Algoritma adalah langkah menyelesaikan masalah", jawaban: "BENAR", penjelasan: "✅ BENAR: Itulah definisi dasar algoritma." }
-        ];
+// ==============================================
+// SISWA
+// ==============================================
+async function cobaMasuk() {
+  namaSiswa = document.getElementById("nama-saya").value.trim();
+  if (!namaSiswa) return alert("Isi nama dulu!");
+  document.getElementById("pesan-salah").style.display = "none";
+  
+  await ambilDataTerbaru();
+  
+  if (daftarTim.length === 0) {
+    document.getElementById("pesan-salah").style.display = "block";
+    return;
+  }
+  
+  tampilLayar("pilih-tim");
+  tampilPilihanTim();
+  mulaiPantauUpdate();
+}
+
+function tampilPilihanTim() {
+  const wadah = document.getElementById("daftar-tim-pilihan");
+  wadah.innerHTML = daftarTim.map((t, i) => {
+    const sudah = t.anggota.some(a => a.nama === namaSiswa);
+    return `
+      <div class="kartu-tim ${sudah ? 'terpilih' : ''}" onclick="pilihGabung(${i})">
+        <div class="nama-tim">${sudah ? '✅ ' : ''}${t.nama}</div>
+        <div style="color:#666; font-size:0.9rem;">${t.anggota.length} anggota</div>
+        <div class="daftar-anggota">
+          ${t.anggota.map(a => `
+            <span class="baju-nama ${a.nama === namaSiswa ? 'saya' : ''}">
+              ${a.nama} (${a.poin||0})
+            </span>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function pilihGabung(idx) {
+  if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
+    timSaya = idx;
+    indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
+    sudahGabung = true;
+    poinSaya = daftarTim[idx].anggota[indeksAnggotaSaya].poin || 0;
+    poinTersimpanDiSheet = poinSaya;
+    tampilLayarTunggu();
+    return;
+  }
+  
+  if (daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa))) {
+    alert("⚠️ Nama sudah dipakai di tim lain!");
+    return;
+  }
+  
+  daftarTim[idx].anggota.push({ nama: namaSiswa, poin: 0 });
+  poinSaya = 0; poinTersimpanDiSheet = 0;
+  
+  sedangKirim = true;
+  await kirimKeSheet({ aksi: "gabungTim", kode: kodeRuang, tim: daftarTim });
+  sedangKirim = false;
+  
+  timSaya = idx;
+  indeksAnggotaSaya = daftarTim[idx].anggota.length - 1;
+  sudahGabung = true;
+  tampilLayarTunggu();
+}
+
+function tampilLayarTunggu() {
+  tampilLayar("tunggu");
+  document.getElementById("info-saya").innerHTML = `
+    ✅ <strong>${namaSiswa}</strong><br>Bergabung di <strong>${daftarTim[timSaya].nama}</strong>
+  `;
+  document.getElementById("poin-saya").textContent = poinSaya;
+}
+
+function masukLayarBermain() {
+  soalKe = 0; jawabanSaya = null;
+  tampilLayar("bermain");
+  if (peran === 'siswa') {
+    document.getElementById("tampil-poin-saya").style.display = "inline";
+    document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
+  }
+  tampilSoal();
+}
+
+// ==============================================
+// BERMAIN
+// ==============================================
+async function mulaiKuis() {
+  if (daftarSoal.length === 0) return alert("Belum ada soal!");
+  sudahMulai = true;
+  if (sinkron) clearInterval(sinkron);
+  
+  sedangKirim = true;
+  await kirimKeSheet({ aksi: "mulaiKuis", kode: kodeRuang, tim: daftarTim });
+  sedangKirim = false;
+  
+  masukLayarBermain();
+}
+
+function tampilSoal() {
+  sudahJawab = false; jawabanSaya = null;
+  daftarTim.forEach(t => t.jawaban = null);
+  
+  document.getElementById("info-soal-ke").textContent = `Soal ${soalKe+1}/${daftarSoal.length}`;
+  if (peran === 'guru') document.getElementById("teks-soal-guru").textContent = daftarSoal[soalKe].teks;
+  document.getElementById("hasil-soal").style.display = "none";
+  
+  document.getElementById("jwb-benar").disabled = false;
+  document.getElementById("jwb-salah").disabled = false;
+  document.getElementById("jwb-benar").classList.remove("dipilih");
+  document.getElementById("jwb-salah").classList.remove("dipilih");
+  
+  let sisaWaktu = WAKTU_SOAL;
+  document.getElementById("tampil-timer").textContent = sisaWaktu + "s";
+  if (timer) clearInterval(timer);
+  timer = setInterval(() => {
+    sisaWaktu--;
+    document.getElementById("tampil-timer").textContent = sisaWaktu + "s";
+    if (sisaWaktu <= 0) { clearInterval(timer); waktuHabis(); }
+  }, 1000);
+}
+
+function pilihJawab(pilihan) {
+  if (sudahJawab) return;
+  sudahJawab = true;
+  jawabanSaya = pilihan;
+  
+  document.getElementById("jwb-benar").disabled = true;
+  document.getElementById("jwb-salah").disabled = true;
+  document.getElementById("jwb-benar").classList.toggle("dipilih", pilihan === 'BENAR');
+  document.getElementById("jwb-salah").classList.toggle("dipilih", pilihan === 'SALAH');
+  
+  if (timSaya !== null && daftarTim[timSaya]) {
+    daftarTim[timSaya].jawaban = pilihan;
+  }
+}
+
+async function waktuHabis() {
+  const soal = daftarSoal[soalKe];
+  const jawabanBenar = soal.jawaban;
+  let benarSaya = false;
+  
+  if (peran === 'siswa' && jawabanSaya) {
+    benarSaya = jawabanSaya === jawabanBenar;
+    if (benarSaya) poinSaya += 1;
+    if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
+      daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
+    }
+  }
+  
+  if (peran === 'guru') {
+    daftarTim.forEach(tim => {
+      if (tim.jawaban === jawabanBenar) {
+        tim.anggota.forEach(a => { a.poin = (a.poin || 0) + 1; });
       }
+    });
+  }
+  
+  sedangKirim = true;
+  await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
+  sedangKirim = false;
+  
+  const kotak = document.getElementById("hasil-soal");
+  kotak.style.display = "block";
+  kotak.innerHTML = `
+    <div style="padding:15px; border-radius:10px; background:${benarSaya ? '#d4edda' : '#f8d7da'}; color:${benarSaya ? '#155724' : '#721c24'};">
+      ${benarSaya ? '✅ BENAR! +1 Poin' : '❌ SALAH!'}<br>
+      Jawaban benar: <strong>${jawabanBenar}</strong><br>
+      ${soal.penjelasan}
+      ${peran === 'siswa' ? `<br>⭐ Poin Anda sekarang: <strong>${poinSaya}</strong>` : ''}
+    </div>
+  `;
+  
+  if (peran === 'siswa' && sudahMulai) {
+    document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
+  }
+  if (peran === 'guru') tampilDaftarTimGuru();
+  
+  setTimeout(async () => {
+    soalKe++;
+    if (soalKe < daftarSoal.length) {
+      tampilSoal();
+    } else {
+      await selesai();
     }
-  </script>
+  }, 3000);
+}
+
+async function selesai() {
+  if (timer) clearInterval(timer);
+  tampilLayar("akhir");
+  
+  const semuaSiswa = [];
+  daftarTim.forEach(t => {
+    t.anggota.forEach(a => {
+      semuaSiswa.push({ nama: a.nama, poin: a.poin || 0, tim: t.nama });
+    });
+  });
+  semuaSiswa.sort((a, b) => b.poin - a.poin);
+  
+  document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s, i) => {
+    let kls = "", mdl = "";
+    if (i === 0) { kls = "p1"; mdl = "🥇"; }
+    else if (i === 1) { kls = "p2"; mdl = "🥈"; }
+    else if (i === 2) { kls = "p3"; mdl = "🥉"; }
+    return `
+      <div class="item-p ${kls}">
+        <div>${mdl || (i+1) + '.'} ${s.nama}</div>
+        <div>⭐ ${s.poin} — ${s.tim}</div>
+      </div>
+    `;
+  }).join("");
+  
+  // HANYA GURU yang simpan ke sheet hasil
+  if (peran === 'guru') {
+    sedangKirim = true;
+    await kirimKeSheet({
+      aksi: "simpanHasil",
+      kode: kodeRuang,
+      tim: daftarTim,
+      siswa: semuaSiswa,
+      waktu: new Date().toLocaleString("id-ID"),
+      status: "SELESAI"
+    });
+    sedangKirim = false;
+    document.getElementById("status-simpan").style.display = "block";
+  }
+  
+  if (sinkron) clearInterval(sinkron);
+}
+
+// ==============================================
+// FUNGSI BANTUAN
+// ==============================================
+function tampilLayar(nama) {
+  document.querySelectorAll(".layar").forEach(l => l.classList.remove("aktif"));
+  document.getElementById(`layar-${nama}`).classList.add("aktif");
+}
+
+async function kirimKeSheet(data) {
+  try {
+    await fetch(APPSCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    return { status: "ok" };
+  } catch (e) {
+    console.log("Kirim:", e);
+    return null;
+  }
+}
+
+async function muatSoal() {
+  try {
+    const res = await fetch("soal.csv", { cache: "no-store" });
+    if (!res.ok) throw 0;
+    const teks = await res.text();
+    const baris = teks.split("\n");
+    daftarSoal = [];
+    for (let i = 1; i < baris.length; i++) {
+      const b = baris[i].split(",").map(x => x.trim().replace(/^"|"$/g, ""));
+      if (b.length < 2 || !b[0]) continue;
+      const jawabanMentah = String(b[1]).toUpperCase().trim();
+      daftarSoal.push({
+        teks: b[0],
+        jawaban: jawabanMentah === "BENAR" ? "BENAR" : "SALAH",
+        penjelasan: b[2] || (jawabanMentah === "BENAR" ? "✅ Benar!" : "❌ Salah!")
+      });
+    }
+  } catch {
+    daftarSoal = [
+      { teks: "CPU adalah otak komputer", jawaban: "BENAR", penjelasan: "✅ BENAR: CPU memproses semua perintah dan data." },
+      { teks: "Data di RAM tetap ada setelah dimatikan", jawaban: "SALAH", penjelasan: "❌ SALAH: Data di RAM hilang saat dimatikan." },
+      { teks: "Algoritma adalah langkah menyelesaikan masalah", jawaban: "BENAR", penjelasan: "✅ BENAR: Itulah definisi dasar algoritma." }
+    ];
+  }
+}
+</script>
 </body>
 </html>

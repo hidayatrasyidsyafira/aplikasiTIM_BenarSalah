@@ -533,105 +533,70 @@
     }
 
     async function ambilDataTerbaru() {
-      try {
-        const res = await fetch(
-          `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`
-        );
+    try {
+        // Baca dari Sheet lewat API
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
         if (!res.ok) return;
-
         let teks = await res.text();
         const mulai = teks.indexOf('{');
         if (mulai === -1) return;
         teks = teks.slice(mulai);
-        teks = teks.replace(/google\.visualization\.Query\.setResponse\(/, '')
-                   .replace(/\);\s*$/, '');
-
+        teks = teks.replace(/google\.visualization\.Query\.setResponse\(/, '').replace(/\);\s*$/, '');
         const data = JSON.parse(teks);
-        if (!data.table?.rows) return;
-
-        const baris = data.table.rows.find(r =>
-          r?.c?.[0] && String(r.c[0].v) === String(kodeRuang)
-        );
-        if (!baris?.c?.[1]?.v) return;
-
+        
+        if (!data.table || !data.table.rows) return;
+        
+        // Cari baris sesuai kode ruang
+        const baris = data.table.rows.find(r => {
+          if (!r.c || !r.c[0]) return false;
+          return String(r.c[0].v) === String(kodeRuang);
+        });
+        
+        if (!baris || !baris.c || !baris.c[1] || !baris.c[1].v) return;
+        
+        // Ambil data: c[0]=kode, c[1]=data_tim, c[3]=status
         let timBaru = JSON.parse(baris.c[1].v);
         const status = baris.c[3]?.v || "SIAP";
-
-        // === GURU: Jangan timpa data yang baru dibuat ===
+        
+        // === GURU: Perbarui tampilan otomatis ===
         if (peran === 'guru') {
-          if (daftarTim.length > timBaru.length) {
-            await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
-            return; // Tunggu putaran berikutnya
-          }
-          // Gabungkan poin
-          for (let t = 0; t < timBaru.length; t++) {
-            if (!daftarTim[t]) continue;
-            for (let a = 0; a < timBaru[t].anggota.length; a++) {
-              const nama = timBaru[t].anggota[a].nama;
-              const saya = daftarTim[t].anggota.find(x => x.nama === nama);
-              if (saya) {
-                timBaru[t].anggota[a].poin = Math.max(
-                  timBaru[t].anggota[a].poin || 0,
-                  saya.poin || 0
-                );
-              }
-            }
-          }
+            // Jangan timpa kalau sedang kirim data
+            if (sedangKirim) return;
+            
+            // Gabungkan poin lalu tampilkan
+            daftarTim = timBaru;
+            tampilDaftarTimGuru(); // ← Ini yang akan menampilkan nama siswa
         }
-
-        // === SISWA: Lindungi poin lokal ===
+        
+        // === SISWA: Sinkronisasi poin ===
         if (peran === 'siswa' && sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
-          if (timBaru[timSaya]?.anggota[indeksAnggotaSaya]) {
-            const poinDariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
-            if (poinDariSheet > poinTersimpanDiSheet) {
-              poinSaya = poinDariSheet;
-              poinTersimpanDiSheet = poinDariSheet;
-            }
-            timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
-          }
-        }
-
-        // Perbarui jika berubah
-        if (JSON.stringify(timBaru) !== JSON.stringify(daftarTim)) {
-          daftarTim = timBaru;
-
-          if (peran === 'guru') {
-            tampilDaftarTimGuru();
-          } else if (peran === 'siswa' && sudahGabung) {
-            tampilPilihanTim();
-            // Cari posisi siswa jika belum ada
-            if (timSaya === null || indeksAnggotaSaya === null) {
-              const posisiSaya = daftarTim.findIndex(t =>
-                t.anggota.some(a => a.nama === namaSiswa)
-              );
-              if (posisiSaya !== -1) {
-                timSaya = posisiSaya;
-                indeksAnggotaSaya = daftarTim[timSaya].anggota.findIndex(a => a.nama === namaSiswa);
-                poinSaya = daftarTim[timSaya].anggota[indeksAnggotaSaya].poin || 0;
-                poinTersimpanDiSheet = poinSaya;
-                document.getElementById("poin-saya").textContent = poinSaya;
-                if (sudahMulai) {
-                  document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
+            if (timBaru[timSaya] && timBaru[timSaya].anggota[indeksAnggotaSaya]) {
+                const poinDariSheet = timBaru[timSaya].anggota[indeksAnggotaSaya].poin || 0;
+                if (poinDariSheet > poinTersimpanDiSheet) {
+                    poinSaya = poinDariSheet;
+                    poinTersimpanDiSheet = poinDariSheet;
                 }
-              }
+                timBaru[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
             }
-          }
+            daftarTim = timBaru;
         }
-
-        // Mulai kuis
+        
+        // Cek status mulai
         if (status === "MULAI" && !sudahMulai) {
-          sudahMulai = true;
-          if (peran === 'siswa' && sudahGabung) masukLayarBermain();
+            sudahMulai = true;
+            if (peran === 'siswa' && sudahGabung) {
+                masukLayarBermain();
+            }
         }
-
-        // Selesai
-        if (status === "SELESAI" && sinkron) clearInterval(sinkron);
-
-      } catch (e) {
+        
+        if (status === "SELESAI") {
+            if (sinkron) clearInterval(sinkron);
+        }
+        
+    } catch (e) {
         console.log("Ambil data:", e.message);
-      }
     }
-
+}
     // ==============================================
     // FUNGSI — SISWA
     // ==============================================

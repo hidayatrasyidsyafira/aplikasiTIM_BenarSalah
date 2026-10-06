@@ -673,36 +673,45 @@
     }
 
     async function pilihGabung(idx) {
-      // Sudah bergabung? Langsung masuk
+      // Sudah bergabung → langsung tampil
       if (daftarTim[idx].anggota.some(a => a.nama === namaSiswa)) {
-        timSaya = idx;
-        indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
-        sudahGabung = true;
-        poinSaya = daftarTim[idx].anggota[indeksAnggotaSaya].poin || 0;
-        poinTersimpanDiSheet = poinSaya;
-        tampilLayarTunggu();
-        return;
+          timSaya = idx;
+          indeksAnggotaSaya = daftarTim[idx].anggota.findIndex(a => a.nama === namaSiswa);
+          sudahGabung = true;
+          poinSaya = daftarTim[idx].anggota[indeksAnggotaSaya].poin || 0;
+          poinTersimpanDiSheet = poinSaya;
+          tampilLayarTunggu();
+          return;
       }
-
-      // Cek nama dipakai di tim lain
+      
+      // Cek nama sudah dipakai di tim lain
       const sudahAda = daftarTim.some(t => t.anggota.some(a => a.nama === namaSiswa));
-      if (sudahAda) return alert("⚠️ Nama sudah dipakai di tim lain!");
-
-      // Tambahkan ke tim
-      daftarTim[idx].anggota.push({ nama: namaSiswa, poin: 0 });
+      if (sudahAda) {
+          alert("⚠️ Nama sudah dipakai di tim lain!");
+          return;
+      }
+      
+      // Tambahkan ke data LOKAL dulu — langsung terlihat di layar siswa
+      daftarTim[idx].anggota.push({nama: namaSiswa, poin: 0});
       poinSaya = 0;
       poinTersimpanDiSheet = 0;
-
+      
+      // Kirim ke Sheet
       sedangKirim = true;
-      await kirimKeSheet({ aksi: "gabungTim", kode: kodeRuang, idxTim: idx, nama: namaSiswa });
+      await kirimKeSheet({
+          aksi: "gabungTim",
+          kode: kodeRuang,
+          idxTim: idx,
+          nama: namaSiswa,
+          tim: daftarTim // ⭐ Kirim SELURUH data tim yang sudah diperbarui
+      });
       sedangKirim = false;
-
+      
       timSaya = idx;
       indeksAnggotaSaya = daftarTim[idx].anggota.length - 1;
       sudahGabung = true;
       tampilLayarTunggu();
-    }
-
+  }
     function tampilLayarTunggu() {
       tampilLayar("tunggu");
       document.getElementById("info-saya").innerHTML = `

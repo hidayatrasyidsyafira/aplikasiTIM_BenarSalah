@@ -354,11 +354,41 @@ async function ambilDataTerbaru() {
 
     if (status === "SELESAI") {
       if (sinkron) clearInterval(sinkron);
+
+      // ✅ TAMPILKAN HASIL DI HP SISWA JUGA
       if (!sudahMulai && peran === 'siswa' && sudahGabung) {
         sudahMulai = true;
-        // ... bagian tampil hasil tetap sama
-        tampilLayar("akhir");
       }
+
+      // Selalu susun & tampilkan peringkat — untuk SISWA maupun GURU
+      const semuaSiswa = [];
+      daftarTim.forEach(t => {
+        t.anggota.forEach(a => {
+          semuaSiswa.push({ 
+            nama: a.nama, 
+            poin: a.poin || 0, 
+            tim: t.nama 
+          });
+        });
+      });
+      semuaSiswa.sort((a, b) => b.poin - a.poin);
+
+      // Tampilkan di layar hasil
+      document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s, i) => {
+        let kls = "", mdl = "";
+        if (i === 0) { kls = "p1"; mdl = "🥇"; }
+        else if (i === 1) { kls = "p2"; mdl = "🥈"; }
+        else if (i === 2) { kls = "p3"; mdl = "🥉"; }
+        return `
+          <div class="item-p ${kls}">
+            <div>${mdl || (i+1) + '.'} ${s.nama}</div>
+            <div>⭐ ${s.poin} — ${s.tim}</div>
+          </div>
+        `;
+      }).join("");
+
+      // Pastikan masuk ke layar hasil
+      tampilLayar("akhir");
     }
   } catch (e) {
     console.log("Ambil data:", e.message);
@@ -628,97 +658,99 @@ async function selesai() {
   if (timer) clearInterval(timer);
   tampilLayar("akhir");
   
-  const semuaSiswa = [];
-  daftarTim.forEach(t => {
-    t.anggota.forEach(a => {
-      semuaSiswa.push({ nama: a.nama, poin: a.poin || 0, tim: t.nama });
-    });
-  });
-  semuaSiswa.sort((a, b) => b.poin - a.poin);
-  
-  document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s, i) => {
-    let kls = "", mdl = "";
-    if (i === 0) { kls = "p1"; mdl = "🥇"; }
-    else if (i === 1) { kls = "p2"; mdl = "🥈"; }
-    else if (i === 2) { kls = "p3"; mdl = "🥉"; }
-    return `
-      <div class="item-p ${kls}">
-        <div>${mdl || (i+1) + '.'} ${s.nama}</div>
-        <div>⭐ ${s.poin} — ${s.tim}</div>
-      </div>
-    `;
-  }).join("");
-  
   // HANYA GURU yang simpan ke sheet hasil
   if (peran === 'guru') {
-  sedangKirim = true;
-  
-  // ✅ BACA DATA TERBARU LANGSUNG DARI SHEET "ruang"
-  let dataTerbaruDariSheet = daftarTim;
-  try {
-    const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
-    if (res.ok) {
-      let teks = await res.text();
-      const mulai = teks.indexOf('{');
-      if (mulai !== -1) {
-        teks = teks.slice(mulai).replace(/google\.visualization\.Query\.setResponse\(/, '').replace(/\);\s*$/, '');
-        const data = JSON.parse(teks);
-        if (data.table && data.table.rows) {
-          const baris = data.table.rows.find(r => {
-            if (!r.c || !r.c[0]) return false;
-            return String(r.c[0].v) === String(kodeRuang);
-          });
-          if (baris && baris.c && baris.c[1] && baris.c[1].v) {
-            dataTerbaruDariSheet = JSON.parse(baris.c[1].v); // Poin TERBARU dari siswa
-            console.log("✅ Ambil data terbaru dari sheet:", dataTerbaruDariSheet);
+    sedangKirim = true;
+    
+    // ✅ BACA DATA TERBARU LANGSUNG DARI SHEET "ruang"
+    let dataTerbaruDariSheet = daftarTim;
+    try {
+      const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ruang&_t=${Date.now()}`);
+      if (res.ok) {
+        let teks = await res.text();
+        const mulai = teks.indexOf('{');
+        if (mulai !== -1) {
+          teks = teks.slice(mulai).replace(/google\.visualization\.Query\.setResponse\(/, '').replace(/\);\s*$/, '');
+          const data = JSON.parse(teks);
+          if (data.table && data.table.rows) {
+            const baris = data.table.rows.find(r => {
+              if (!r.c || !r.c[0]) return false;
+              return String(r.c[0].v) === String(kodeRuang);
+            });
+            if (baris && baris.c && baris.c[1] && baris.c[1].v) {
+              dataTerbaruDariSheet = JSON.parse(baris.c[1].v);
+              console.log("✅ Ambil data terbaru dari sheet:", dataTerbaruDariSheet);
+            }
           }
         }
       }
+    } catch (e) {
+      console.log("Baca sheet gagal, pakai data lokal:", e.message);
     }
-  } catch (e) {
-    console.log("Baca sheet gagal, pakai data lokal:", e.message);
-  }
-
-  // Susun ulang daftar dari data TERBARU
-  const semuaSiswaTerbaru = [];
-  dataTerbaruDariSheet.forEach(t => {
-    t.anggota.forEach(a => {
-      semuaSiswaTerbaru.push({ nama: a.nama, poin: a.poin || 0, tim: t.nama });
+    
+    // Susun ulang daftar dari data TERBARU
+    const semuaSiswaTerbaru = [];
+    dataTerbaruDariSheet.forEach(t => {
+      t.anggota.forEach(a => {
+        semuaSiswaTerbaru.push({ nama: a.nama, poin: a.poin || 0, tim: t.nama });
+      });
     });
-  });
-  semuaSiswaTerbaru.sort((a, b) => b.poin - a.poin);
-
-  // Tampilkan hasil yang BENAR di layar guru
-  document.getElementById("daftar-hasil").innerHTML = semuaSiswaTerbaru.map((s, i) => {
-    let kls = "", mdl = "";
-    if (i === 0) { kls = "p1"; mdl = "🥇"; }
-    else if (i === 1) { kls = "p2"; mdl = "🥈"; }
-    else if (i === 2) { kls = "p3"; mdl = "🥉"; }
-    return `
-      <div class="item-p ${kls}">
-        <div>${mdl || (i+1) + '.'} ${s.nama}</div>
-        <div>⭐ ${s.poin} — ${s.tim}</div>
-      </div>
-    `;
-  }).join("");
-
-  // Kirim ke Apps Script pakai data TERBARU
-  await kirimKeSheet({
-    aksi: "simpanHasil",
-    kode: kodeRuang,
-    tim: dataTerbaruDariSheet,
-    siswa: semuaSiswaTerbaru,
-    waktu: new Date().toLocaleString("id-ID"),
-    status: "SELESAI"
-  });
-  
-  sedangKirim = false;
-  document.getElementById("status-simpan").style.display = "block";
-}
+    semuaSiswaTerbaru.sort((a, b) => b.poin - a.poin);
+    
+    // Tampilkan hasil yang BENAR di layar guru
+    document.getElementById("daftar-hasil").innerHTML = semuaSiswaTerbaru.map((s, i) => {
+      let kls = "", mdl = "";
+      if (i === 0) { kls = "p1"; mdl = "🥇"; }
+      else if (i === 1) { kls = "p2"; mdl = "🥈"; }
+      else if (i === 2) { kls = "p3"; mdl = "🥉"; }
+      return `
+        <div class="item-p ${kls}">
+          <div>${mdl || (i+1) + '.'} ${s.nama}</div>
+          <div>⭐ ${s.poin} — ${s.tim}</div>
+        </div>
+      `;
+    }).join("");
+    
+    // Kirim ke Apps Script pakai data TERBARU
+    await kirimKeSheet({
+      aksi: "simpanHasil",
+      kode: kodeRuang,
+      tim: dataTerbaruDariSheet,
+      siswa: semuaSiswaTerbaru,
+      waktu: new Date().toLocaleString("id-ID"),
+      status: "SELESAI"
+    });
+    
+    sedangKirim = false;
+    document.getElementById("status-simpan").style.display = "block";
+  }
+  else {
+    // ✅ SISWA: tampilkan hasil, TIDAK simpan ke sheet
+    const semuaSiswa = [];
+    daftarTim.forEach(t => {
+      t.anggota.forEach(a => {
+        semuaSiswa.push({ nama: a.nama, poin: a.poin || 0, tim: t.nama });
+      });
+    });
+    semuaSiswa.sort((a, b) => b.poin - a.poin);
+    
+    document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s, i) => {
+      let kls = "", mdl = "";
+      if (i === 0) { kls = "p1"; mdl = "🥇"; }
+      else if (i === 1) { kls = "p2"; mdl = "🥈"; }
+      else if (i === 2) { kls = "p3"; mdl = "🥉"; }
+      return `
+        <div class="item-p ${kls}">
+          <div>${mdl || (i+1) + '.'} ${s.nama}</div>
+          <div>⭐ ${s.poin} — ${s.tim}</div>
+        </div>
+      `;
+    }).join("");
+  }
   
   if (sinkron) clearInterval(sinkron);
 }
-
+  
 // ==============================================
 // FUNGSI BANTUAN
 // ==============================================

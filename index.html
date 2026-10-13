@@ -675,4 +675,83 @@ async function selesai() {
   document.getElementById("daftar-hasil").innerHTML = semuaSiswa.map((s, i) => {
     let kls = "", mdl = "";
     if (i === 0) { kls = "p1"; mdl = "🥇"; }
-    else if
+    else if (i === 1) { kls = "p2"; mdl = "🥈"; }
+    else if (i === 2) { kls = "p3"; mdl = "🥉"; }
+    return `
+      <div class="item-p ${kls}">
+        <div>${mdl || (i+1) + '.'} ${s.nama}</div>
+        <div>⭐ ${s.poin} — ${s.tim}</div>
+      </div>
+    `;
+  }).join("");
+
+  tampilLayar("akhir");
+
+  sedangKirim = true;
+  await kirimKeSheet({
+    aksi: "simpanHasil",
+    kode: kodeRuang,
+    tim: daftarTim,
+    siswa: semuaSiswa,
+    waktu: new Date().toLocaleString("id-ID")
+  });
+  await kirimKeSheet({
+    aksi: "ubahStatus",
+    kode: kodeRuang,
+    status: "SELESAI"
+  });
+  sedangKirim = false;
+  document.getElementById("status-simpan").style.display = "block";
+}
+
+// ==============================================
+// FUNGSI BANTUAN
+// ==============================================
+function tampilLayar(nama) {
+  document.querySelectorAll(".layar").forEach(l => l.classList.remove("aktif"));
+  document.getElementById(`layar-${nama}`).classList.add("aktif");
+}
+
+async function kirimKeSheet(data) {
+  try {
+    await fetch(APPSCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    return { status: "ok" };
+  } catch (e) {
+    console.log("Kirim:", e);
+    return null;
+  }
+}
+
+async function muatSoal() {
+  try {
+    const res = await fetch("soal.csv", { cache: "no-store" });
+    if (!res.ok) throw 0;
+    const teks = await res.text();
+    const baris = teks.split("\n");
+    daftarSoal = [];
+    for (let i = 1; i < baris.length; i++) {
+      const b = baris[i].split(",").map(x => x.trim().replace(/^"|"$/g, ""));
+      if (b.length < 2 || !b[0]) continue;
+      const jawabanMentah = String(b[1]).toUpperCase().trim();
+      daftarSoal.push({
+        teks: b[0],
+        jawaban: jawabanMentah === "BENAR" ? "BENAR" : "SALAH",
+        penjelasan: b[2] || (jawabanMentah === "BENAR" ? "✅ Benar!" : "❌ Salah!")
+      });
+    }
+  } catch {
+    daftarSoal = [
+      { teks: "CPU adalah otak komputer", jawaban: "BENAR", penjelasan: "✅ BENAR: CPU memproses semua perintah dan data." },
+      { teks: "Data di RAM tetap ada setelah dimatikan", jawaban: "SALAH", penjelasan: "❌ SALAH: Data di RAM hilang saat dimatikan." },
+      { teks: "Algoritma adalah langkah menyelesaikan masalah", jawaban: "BENAR", penjelasan: "✅ BENAR: Itulah definisi dasar algoritma." }
+    ];
+  }
+}
+</script>
+</body>
+</html>

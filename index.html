@@ -204,6 +204,9 @@ let sudahGabung = false, sudahMulai = false;
 let poinSaya = 0, poinTersimpanDiSheet = 0;
 let jawabanSaya = null, sedangKirim = false;
 let sudahKirimSelesai = false;
+let jawabanTerkunci = {};        // soalKe -> "BENAR"/"SALAH" (tidak di-reset saat pindah soal)
+let sedangProsesHabis = false;   // cegah waktuHabis() jalan dobel
+let sudahTriggerSelesai = false; // cegah HP kirim simpanHasil 2 kali
 
 document.addEventListener("DOMContentLoaded", async () => {
   await muatSoal();
@@ -298,7 +301,7 @@ function mulaiPantauUpdate() {
 }
 
 // ==============================================
-// AMBIL DATA DARI SHEET (SUMBER KEBENARAN)
+// AMBIL DATA DARI SHEET
 // ==============================================
 async function ambilDataTerbaru() {
   try {
@@ -321,7 +324,6 @@ async function ambilDataTerbaru() {
     const status = baris.c[3]?.v || "SIAP";
     const nomorSoalDiSheet = baris.c[5]?.v ?? 0;
 
-    // Update data tim
     if (peran === 'guru') {
       if (sedangKirim) return;
       daftarTim = timBaru;
@@ -340,7 +342,6 @@ async function ambilDataTerbaru() {
       }
     }
 
-    // STATUS: MULAI
     if (status === "MULAI" && !sudahMulai) {
       sudahMulai = true;
       soalKeGlobal = nomorSoalDiSheet;
@@ -348,18 +349,21 @@ async function ambilDataTerbaru() {
       if (peran === 'siswa' && sudahGabung) masukLayarBermain();
     }
 
-    // SINKRONISASI SOAL (hanya siswa)
+    // Sinkronisasi soal: HANYA pindah kalau soal sebelumnya sudah selesai diproses
     if (peran === 'siswa' && sudahMulai && sudahGabung) {
-      if (nomorSoalDiSheet !== soalKeGlobal) {
-        soalKeGlobal = nomorSoalDiSheet;
-        soalKe = soalKeGlobal;
-        if (soalKe < daftarSoal.length) {
-          tampilSoal();
+      if (nomorSoalDiSheet > soalKeGlobal) {
+        // Device lain sudah maju. Tunggu sampai waktuHabis() kita selesai.
+        if (!sedangProsesHabis) {
+          soalKeGlobal = nomorSoalDiSheet;
+          soalKe = soalKeGlobal;
+          if (soalKe < daftarSoal.length) {
+            tampilSoal();
+          }
         }
+        // Kalau sedangProsesHabis true, biarkan waktuHabis() yang pindah
       }
     }
 
-    // STATUS: SELESAI
     if (status === "SELESAI") {
       if (sinkron) clearInterval(sinkron);
       if (!sudahMulai) sudahMulai = true;
@@ -392,7 +396,6 @@ function tampilkanHasilAkhir() {
   tampilLayar("akhir");
 }
 
-// Helper: susun daftar semua siswa
 function susunSemuaSiswa() {
   const semua = [];
   daftarTim.forEach(t => {
@@ -483,6 +486,8 @@ function tampilLayarTunggu() {
 function masukLayarBermain() {
   soalKe = soalKeGlobal;
   jawabanSaya = null;
+  jawabanTerkunci = {}; // reset
+  sudahTriggerSelesai = false;
   tampilLayar("bermain");
 
   if (peran === 'siswa') {
@@ -515,7 +520,9 @@ async function mulaiKuis() {
 
 function tampilSoal() {
   if (soalKe >= daftarSoal.length) return;
-  sudahJawab = false; jawabanSaya = null;
+
+  sudahJawab = false; 
+  jawabanSaya = null;
   sudahKirimSelesai = false;
 
   document.getElementById("info-soal-ke").textContent = `Soal ${soalKe+1}/${daftarSoal.length}`;
@@ -542,7 +549,11 @@ function tampilSoal() {
   timer = setInterval(() => {
     sisaWaktu--;
     document.getElementById("tampil-timer").textContent = sisaWaktu + "s";
-    if (sisaWaktu <= 0) { clearInterval(timer); waktuHabis(); }
+    if (sisaWaktu <= 0) { 
+      clearInterval(timer); 
+      timer = null;
+      waktuHabis(); 
+    }
   }, 1000);
 }
 
@@ -550,6 +561,9 @@ function pilihJawab(pilihan) {
   if (sudahJawab) return;
   sudahJawab = true;
   jawabanSaya = pilihan;
+
+  // ⭐ SIMPAN PERMANEN per soal — tidak akan hilang walau tampilSoal() dipanggil
+  jawabanTerkunci[soalKe] = pilihan;
 
   document.getElementById("jwb-benar").disabled = true;
   document.getElementById("jwb-salah").disabled = true;
@@ -562,20 +576,23 @@ function pilihJawab(pilihan) {
 }
 
 async function waktuHabis() {
+  if (sedangProsesHabis) return; // cegah dobel
+  sedangProsesHabis = true;
+
   const soal = daftarSoal[soalKe];
   const jawabanBenar = soal.jawaban;
+  const jawabanSiswa = jawabanTerkunci[soalKe]; // ⭐ ambil dari yang terkunci
   let benarSaya = false;
 
   if (peran === 'siswa') {
-    if (jawabanSaya) {
-      benarSaya = jawabanSaya === jawabanBenar;
+    if (jawabanSiswa) {
+      benarSaya = jawabanSiswa === jawabanBenar;
       if (benarSaya) poinSaya += 1;
       if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
         daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
       }
     }
 
-    // Tampilkan hasil jawaban di HP ini
     const kotak = document.getElementById("hasil-soal");
     kotak.style.display = "block";
     kotak.innerHTML = `
@@ -588,7 +605,6 @@ async function waktuHabis() {
     `;
     document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
 
-    // Kirim poin ke sheet
     sedangKirim = true;
     await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
     sedangKirim = false;
@@ -596,9 +612,8 @@ async function waktuHabis() {
     const soalTerakhir = (soalKe + 1) >= daftarSoal.length;
 
     if (soalTerakhir) {
-      // SOAL TERAKHIR: kirim sinyal SELESAI (siapa pun yang duluan)
-      if (!sudahKirimSelesai) {
-        sudahKirimSelesai = true;
+      if (!sudahTriggerSelesai) {
+        sudahTriggerSelesai = true;
         setTimeout(async () => {
           await kirimKeSheet({
             aksi: "perbaruiSoal",
@@ -617,10 +632,12 @@ async function waktuHabis() {
             kode: kodeRuang,
             status: "SELESAI"
           });
+          sedangProsesHabis = false;
         }, 1500);
+      } else {
+        sedangProsesHabis = false;
       }
     } else {
-      // Pindah ke soal berikutnya setelah 3 detik
       if (!sudahKirimSelesai) {
         sudahKirimSelesai = true;
         setTimeout(async () => {
@@ -629,9 +646,20 @@ async function waktuHabis() {
             kode: kodeRuang,
             soalKe: soalKe + 1
           });
+          // Setelah kirim, maju sendiri (tidak menunggu polling)
+          if (soalKe + 1 < daftarSoal.length) {
+            soalKe++;
+            soalKeGlobal = soalKe;
+            tampilSoal();
+          }
+          sedangProsesHabis = false;
         }, 3000);
+      } else {
+        sedangProsesHabis = false;
       }
     }
+  } else {
+    sedangProsesHabis = false;
   }
 }
 
@@ -659,13 +687,6 @@ function mulaiPantauHasil() {
       if (!baris || !baris.c) return;
 
       const status = baris.c[3]?.v || "SIAP";
-      const nomorSoalDiSheet = baris.c[5]?.v ?? 0;
-
-      if (status === "MULAI" && nomorSoalDiSheet >= daftarSoal.length) {
-        clearInterval(cek);
-        sudahMulai = true;
-        await selesai();
-      }
 
       if (status === "SELESAI") {
         clearInterval(cek);

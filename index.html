@@ -205,9 +205,9 @@ let poinSaya = 0, poinTersimpanDiSheet = 0;
 let jawabanSaya = null, sedangKirim = false;
 let sudahKirimSelesai = false;
 let jawabanTerkunci = {};        // soalKe -> "BENAR"/"SALAH"
-let sedangProsesHabis = false;   // cegah waktuHabis() jalan dobel
-let sudahTriggerSelesai = false; // cegah kirim simpanHasil 2 kali
-let soalSudahFinal = {};         // soalKe -> true (soal sudah difinalisasi)
+let sedangProsesHabis = false;
+let sudahTriggerSelesai = false;
+let soalSudahFinal = {};         // soalKe -> true
 
 document.addEventListener("DOMContentLoaded", async () => {
   await muatSoal();
@@ -229,6 +229,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     el.style.display = (peran === 'guru') ? 'block' : 'none';
   });
 });
+
+// ==============================================
+// FUNGSI HITUNG POIN DARI JAWABAN TERSIMPAN
+// ==============================================
+// ⭐ Ini yang mencegah poin berlebih — selalu hitung ulang dari jawabanTerkunci
+function hitungPoinDariJawaban() {
+  let total = 0;
+  Object.keys(jawabanTerkunci).forEach(k => {
+    const idx = Number(k);
+    if (idx < daftarSoal.length && jawabanTerkunci[k] === daftarSoal[idx].jawaban) {
+      total++;
+    }
+  });
+  return total;
+}
 
 // ==============================================
 // GURU
@@ -324,7 +339,6 @@ async function ambilDataTerbaru() {
     let timBaru = JSON.parse(baris.c[1].v);
     const status = baris.c[3]?.v || "SIAP";
 
-    // Update data tim
     if (peran === 'guru') {
       if (sedangKirim) return;
       daftarTim = timBaru;
@@ -332,7 +346,7 @@ async function ambilDataTerbaru() {
     }
 
     if (peran === 'siswa') {
-      // ⭐ JANGAN timpa daftarTim — update poin saja, ambil yang tertinggi
+      // ⭐ Gabungkan data — pertahankan poin tertinggi
       if (timBaru && timBaru.length > 0) {
         timBaru.forEach((tBaru, idx) => {
           if (!daftarTim[idx]) {
@@ -341,7 +355,6 @@ async function ambilDataTerbaru() {
           tBaru.anggota.forEach(aBaru => {
             const ada = daftarTim[idx].anggota.find(x => x.nama === aBaru.nama);
             if (ada) {
-              // Pertahankan poin tertinggi antara lokal & sheet
               ada.poin = Math.max(ada.poin || 0, aBaru.poin || 0);
             } else {
               daftarTim[idx].anggota.push({ nama: aBaru.nama, poin: aBaru.poin || 0 });
@@ -352,8 +365,10 @@ async function ambilDataTerbaru() {
 
       if (sudahGabung && timSaya !== null && indeksAnggotaSaya !== null) {
         if (daftarTim[timSaya]?.anggota[indeksAnggotaSaya]) {
+          // ⭐ Hitung ulang poin dari jawabanTerkunci (paling akurat)
+          const poinDariJawaban = hitungPoinDariJawaban();
           const poinLokal = daftarTim[timSaya].anggota[indeksAnggotaSaya].poin || 0;
-          poinSaya = Math.max(poinSaya, poinLokal);
+          poinSaya = Math.max(poinDariJawaban, poinLokal);
           poinTersimpanDiSheet = poinSaya;
           document.getElementById("poin-saya").textContent = poinSaya;
           document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
@@ -361,7 +376,6 @@ async function ambilDataTerbaru() {
       }
     }
 
-    // STATUS: MULAI
     if (status === "MULAI" && !sudahMulai) {
       sudahMulai = true;
       soalKeGlobal = 0;
@@ -369,12 +383,10 @@ async function ambilDataTerbaru() {
       if (peran === 'siswa' && sudahGabung) masukLayarBermain();
     }
 
-    // STATUS: SELESAI
     if (status === "SELESAI") {
       if (sinkron) clearInterval(sinkron);
       if (!sudahMulai) sudahMulai = true;
       if (peran === 'siswa') {
-        // ✅ Tunggu sampai siswa sendiri benar-benar selesai
         if (sudahTriggerSelesai && !sedangProsesHabis) {
           if (!document.getElementById("layar-akhir").classList.contains("aktif")) {
             tampilkanHasilAkhir();
@@ -388,6 +400,13 @@ async function ambilDataTerbaru() {
 }
 
 function tampilkanHasilAkhir() {
+  // ⭐ Sebelum tampil, sinkronkan poin dari jawabanTerkunci
+  const poinFinal = hitungPoinDariJawaban();
+  if (poinFinal > poinSaya) poinSaya = poinFinal;
+  if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
+    daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
+  }
+
   const semuaSiswa = susunSemuaSiswa();
   semuaSiswa.sort((a, b) => b.poin - a.poin);
 
@@ -534,9 +553,18 @@ async function mulaiKuis() {
 function tampilSoal() {
   if (soalKe >= daftarSoal.length) return;
 
-  sudahJawab = false;
-  jawabanSaya = null;
-  sudahKirimSelesai = false;
+  // ⭐ JANGAN reset jawaban kalau soal sudah final (pernah dijawab)
+  if (!soalSudahFinal[soalKe]) {
+    sudahJawab = false;
+    jawabanSaya = null;
+    sudahKirimSelesai = false;
+  } else {
+    // Kalau soal sudah final, pertahankan jawaban lama
+    const jawabanLama = jawabanTerkunci[soalKe];
+    sudahJawab = !!jawabanLama;
+    jawabanSaya = jawabanLama || null;
+    sudahKirimSelesai = true;
+  }
 
   document.getElementById("info-soal-ke").textContent = `Soal ${soalKe+1}/${daftarSoal.length}`;
 
@@ -551,10 +579,18 @@ function tampilSoal() {
   document.getElementById("hasil-soal").style.display = "none";
   document.getElementById("hasil-soal").innerHTML = "";
 
-  document.getElementById("jwb-benar").disabled = false;
-  document.getElementById("jwb-salah").disabled = false;
-  document.getElementById("jwb-benar").classList.remove("dipilih");
-  document.getElementById("jwb-salah").classList.remove("dipilih");
+  // Kalau soal sudah final, tampilkan tombol dalam keadaan disabled
+  if (soalSudahFinal[soalKe]) {
+    document.getElementById("jwb-benar").disabled = true;
+    document.getElementById("jwb-salah").disabled = true;
+    if (jawabanSaya === 'BENAR') document.getElementById("jwb-benar").classList.add("dipilih");
+    if (jawabanSaya === 'SALAH') document.getElementById("jwb-salah").classList.add("dipilih");
+  } else {
+    document.getElementById("jwb-benar").disabled = false;
+    document.getElementById("jwb-salah").disabled = false;
+    document.getElementById("jwb-benar").classList.remove("dipilih");
+    document.getElementById("jwb-salah").classList.remove("dipilih");
+  }
 
   let sisaWaktu = WAKTU_SOAL;
   document.getElementById("tampil-timer").textContent = sisaWaktu + "s";
@@ -572,10 +608,10 @@ function tampilSoal() {
 
 function pilihJawab(pilihan) {
   if (sudahJawab) return;
+  if (soalSudahFinal[soalKe]) return;   // ⭐ cegah dobel jawab
   sudahJawab = true;
   jawabanSaya = pilihan;
 
-  // Simpan permanen per soal
   jawabanTerkunci[soalKe] = pilihan;
 
   document.getElementById("jwb-benar").disabled = true;
@@ -589,11 +625,9 @@ function pilihJawab(pilihan) {
 }
 
 async function waktuHabis() {
-  // Guard 1: cegah dobel untuk soal yang sama
   if (soalSudahFinal[soalKe]) return;
   soalSudahFinal[soalKe] = true;
 
-  // ⭐ Guard 2: FORCE reset kalau stuck
   if (sedangProsesHabis) {
     console.log("sedangProsesHabis stuck, force reset");
     sedangProsesHabis = false;
@@ -608,10 +642,12 @@ async function waktuHabis() {
   if (peran === 'siswa') {
     if (jawabanSiswa) {
       benarSaya = jawabanSiswa === jawabanBenar;
-      if (benarSaya) poinSaya += 1;
-      if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
-        daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
-      }
+    }
+
+    // ⭐ HITUNG ULANG POIN dari jawabanTerkunci — mencegah poin berlebih
+    poinSaya = hitungPoinDariJawaban();
+    if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
+      daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
     }
 
     const kotak = document.getElementById("hasil-soal");
@@ -626,7 +662,6 @@ async function waktuHabis() {
     `;
     document.getElementById("tampil-poin-saya").textContent = `⭐ ${poinSaya}`;
 
-    // Kirim poin ke sheet
     sedangKirim = true;
     await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
     sedangKirim = false;
@@ -639,12 +674,16 @@ async function waktuHabis() {
           if (sudahTriggerSelesai) return;
           sudahTriggerSelesai = true;
 
-          // ⭐ Kirim poin terakhir DULU
+          // ⭐ Hitung ulang poin terakhir sebelum kirim
+          poinSaya = hitungPoinDariJawaban();
+          if (timSaya !== null && indeksAnggotaSaya !== null && daftarTim[timSaya]) {
+            daftarTim[timSaya].anggota[indeksAnggotaSaya].poin = poinSaya;
+          }
+
           sedangKirim = true;
           await kirimKeSheet({ aksi: "perbaruiTim", kode: kodeRuang, tim: daftarTim });
           sedangKirim = false;
 
-          // Beri jeda supaya sheet sempat update
           await new Promise(r => setTimeout(r, 1500));
 
           await kirimKeSheet({
@@ -674,13 +713,13 @@ async function waktuHabis() {
             kode: kodeRuang,
             soalKe: soalKe
           });
-          sedangProsesHabis = false;  // reset dulu
+          sedangProsesHabis = false;
           tampilSoal();
         }
       } catch (e) {
         console.log("Error setTimeout:", e);
       } finally {
-        sedangProsesHabis = false;  // ⭐ SELALU reset
+        sedangProsesHabis = false;
       }
     }, 3000);
   } else {
